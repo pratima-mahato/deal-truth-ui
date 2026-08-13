@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Play } from "lucide-react";
+import { ArrowLeft, Play, Send } from "lucide-react";
 import { callAudioUrl } from "@/api/endpoints/calls";
 import { isReportReadyStatus, isTerminalStatus } from "@/api/contracts";
 import { AudioPlayerProvider, useAudioPlayer } from "@/components/audio/AudioPlayerProvider";
@@ -30,9 +30,14 @@ import { OverviewStory } from "@/features/workspace/OverviewStory";
 import { OutlineView } from "@/features/workspace/OutlineView";
 import { CallInfoView } from "@/features/workspace/CallInfoView";
 import { InsightDrawer } from "@/features/workspace/InsightDrawer";
+import { CrmSendFlow } from "@/features/integrations/CrmSendFlow";
+import { SlackSetupDrawer } from "@/features/integrations/SlackSetupDrawer";
+import { CallIntegrationActions } from "@/features/integrations/CallIntegrationActions";
 import { annotationsForReport, buildOverviewModel } from "@/features/workspace/overviewModel";
 import { useCall, useCallReport, useReanalyze, useShare, useSwapSpeakers, useTranscript } from "@/hooks/useCallApi";
-import { formatDate, formatDuration } from "@/lib/utils";
+import { formatDate, formatDuration, resolveCallDurationMs } from "@/lib/utils";
+import { userFacingMessage } from "@/api/errors";
+import { sharedViewUrl } from "@/api/endpoints/share";
 
 const VIEWS = [
   { id: "overview", label: "Overview" },
@@ -102,9 +107,11 @@ export function CallDetailPage({
     );
   }
 
+  const durationMs = resolveCallDurationMs(call.data.durationMs, transcript.data);
+
   return (
     <EvidenceFocusProvider>
-      <AudioPlayerProvider src={callAudioUrl(callId)} callDurationMs={call.data.durationMs}>
+      <AudioPlayerProvider src={callAudioUrl(callId)} callDurationMs={durationMs}>
         <CallDetailBody
           callId={callId}
           readOnly={readOnly}
@@ -136,11 +143,15 @@ function CallDetailBody({
   const navigate = useNavigate();
   const [swapOpen, setSwapOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [crmOpen, setCrmOpen] = useState(false);
+  const [notifySlack, setNotifySlack] = useState(false);
+  const [slackSetupOpen, setSlackSetupOpen] = useState(false);
   const unavailable = new Set(report.unavailableSections ?? []);
   const splat = useParams()["*"];
   const view = parseView(splat?.split("/")[0] || params.get("view") || undefined);
   const model = useMemo(() => buildOverviewModel(report, transcript), [report, transcript]);
   const annotations = useMemo(() => annotationsForReport(report), [report]);
+  const durationMs = resolveCallDurationMs(report.call.durationMs, transcript);
 
   function setView(next: string) {
     const qs = params.toString();
@@ -159,8 +170,8 @@ function CallDetailBody({
   }, [params.get("segment"), params.get("play")]);
 
   return (
-    <div className="pb-8">
-      <header className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex h-[calc(100dvh-7.5rem)] min-h-0 flex-col">
+      <header className="mb-4 flex shrink-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-start gap-3 sm:items-center">
           <Link to="/" className="text-sm text-ink-500 hover:text-ink-900">
             <span className="inline-flex items-center gap-1">
@@ -177,7 +188,7 @@ function CallDetailBody({
               <StatusPill status={report.call.status} />
             </div>
             <p className="text-sm text-ink-500">
-              {report.call.title} · {formatDate(report.call.createdAt)} · {formatDuration(report.call.durationMs)} ·{" "}
+              {report.call.title} · {formatDate(report.call.createdAt)} · {formatDuration(durationMs)} ·{" "}
               {transcript.speakers.length} participants
             </p>
           </div>
@@ -198,14 +209,28 @@ function CallDetailBody({
                 onClick={() =>
                   share.mutate(undefined, {
                     onSuccess: (link) => {
-                      const url = `${window.location.origin}/shared/${link.token}`;
-                      setShareUrl(url);
-                      void navigator.clipboard.writeText(url);
+                      const url = sharedViewUrl(link);
+                      setShareUrl(url || null);
+                      if (url) void navigator.clipboard.writeText(url);
+                    },
+                    onError: () => {
+                      setShareUrl(null);
                     },
                   })
                 }
               >
                 Share
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setNotifySlack(false);
+                  setCrmOpen(true);
+                }}
+              >
+                <Send className="h-4 w-4" />
+                Send to HubSpot
               </Button>
               <Button
                 variant="ghost"
@@ -224,24 +249,47 @@ function CallDetailBody({
       </header>
 
       {report.call.status === "PARTIAL" ? (
-        <div className="mb-4">
+        <div className="mb-4 shrink-0">
           <Alert tone="warning" title="Partial report">
             {report.call.failureMessage ?? "Some intelligence sections are unavailable. Available evidence still ships."}
           </Alert>
         </div>
       ) : null}
-      {shareUrl ? <p className="mb-3 text-xs text-emerald-800">Share link copied: {shareUrl}</p> : null}
+      {shareUrl ? <p className="mb-3 shrink-0 text-xs text-emerald-800">Share link copied: {shareUrl}</p> : null}
+      {share.isError ? (
+        <div className="mb-3 shrink-0">
+          <Alert tone="danger" title="Could not create share link">
+            {userFacingMessage(share.error, "The API did not return a usable share token.")}
+          </Alert>
+        </div>
+      ) : null}
 
-      <div className="mb-5">
+      <div className="mb-4 shrink-0">
         <Tabs tabs={[...VIEWS]} value={view} onChange={setView} />
       </div>
 
-      {view === "overview" ? <OverviewStory model={model} /> : null}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+      {view === "overview" ? (
+        <div className="space-y-5">
+          <CallIntegrationActions
+            onSendHubSpot={() => {
+              setNotifySlack(false);
+              setCrmOpen(true);
+            }}
+            onConfigureSlack={() => setSlackSetupOpen(true)}
+            onNotifySlack={() => {
+              setNotifySlack(true);
+              setCrmOpen(true);
+            }}
+          />
+          <OverviewStory model={model} />
+        </div>
+      ) : null}
       {view === "outline" ? (
-        <OutlineView sections={model.outline} durationMs={report.call.durationMs} transcript={transcript} />
+        <OutlineView sections={model.outline} durationMs={durationMs} transcript={transcript} />
       ) : null}
       {view === "transcript" ? (
-        <Card className="p-4">
+        <Card className="flex h-full min-h-0 flex-col overflow-hidden p-4">
           <TranscriptPanel transcript={transcript} readOnly={readOnly} annotations={annotations} />
         </Card>
       ) : null}
@@ -262,8 +310,9 @@ function CallDetailBody({
         </div>
       ) : null}
       {view === "info" ? <CallInfoView report={report} transcript={transcript} /> : null}
+      </div>
 
-      <div className="sticky bottom-4 z-20 mt-6">
+      <div className="mt-3 shrink-0 border-t border-ink-100 bg-paper pt-3">
         <AudioPlayer
           moments={report.moments}
           transcript={transcript}
@@ -275,6 +324,20 @@ function CallDetailBody({
       </div>
 
       <InsightDrawer onJumpToTranscript={() => setView("transcript")} />
+
+      <CrmSendFlow
+        open={crmOpen}
+        onClose={() => setCrmOpen(false)}
+        report={report}
+        transcript={transcript}
+        notifySlack={notifySlack}
+      />
+      <SlackSetupDrawer
+        open={slackSetupOpen}
+        onClose={() => setSlackSetupOpen(false)}
+        report={report}
+        transcript={transcript}
+      />
 
       <Modal
         open={swapOpen}

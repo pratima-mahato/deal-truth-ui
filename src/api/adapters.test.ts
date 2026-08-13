@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapCall, mapCallList, mapEvent, mapEvidence, mapFollowUp, mapReport, mapShareLink, mapSnapshot, mapTranscript } from "@/api/adapters";
+import { mapCall, mapCallList, mapEvent, mapEvidence, mapFollowUp, mapReport, mapSearchResponse, mapShareLink, mapSnapshot, mapTranscript } from "@/api/adapters";
 import { toWireCall, toWireTranscript, toWireReport } from "@/mocks/toWire";
 import { buildAcmeTranscript } from "@/mocks/fixtures/acmeTranscript";
 import { acmeCall, buildAcmeReport } from "@/mocks/fixtures/acmeReport";
@@ -66,6 +66,19 @@ describe("mapTranscript", () => {
     expect(mapped.segments[0]?.id).toBe(original.segments[0]?.id);
     expect(mapped.segments).toHaveLength(original.segments.length);
     expect(mapped.text).toContain("Sounds good");
+  });
+
+  it("sorts out-of-order segments and infers duration", () => {
+    const transcript = mapTranscript({
+      call_id: "c1",
+      speakers: [],
+      segments: [
+        { id: "late", speaker_id: "a", start_ms: 224000, end_ms: 230000, text: "bye", sequence_number: 2 },
+        { id: "early", speaker_id: "a", start_ms: 0, end_ms: 1200, text: "hello", sequence_number: 1 },
+      ],
+    });
+    expect(transcript.segments.map((s) => s.id)).toEqual(["early", "late"]);
+    expect(transcript.durationMs).toBe(230000);
   });
 });
 
@@ -260,5 +273,47 @@ describe("live Prompt 2 payloads", () => {
       url: "http://localhost:8000/api/v1/shared/abc",
     });
     expect(link.url).toBe("/shared/abc");
+  });
+
+  it("accepts share_token when token is omitted", () => {
+    const link = mapShareLink({
+      id: "share-1",
+      share_token: "tok-99",
+      url: "https://deal-truth-ngrok.ngrok-free.app/api/v1/shared/tok-99",
+    });
+    expect(link.token).toBe("tok-99");
+    expect(link.url).toBe("/shared/tok-99");
+  });
+});
+
+describe("mapSearchResponse", () => {
+  it("maps a live snake_case segments payload", () => {
+    const mapped = mapSearchResponse(
+      {
+        segments: [
+          {
+            id: "seg-1",
+            call_id: "call-9",
+            start_ms: 8000,
+            end_ms: 12000,
+            text: "that sounds good",
+          },
+        ],
+      },
+      "good",
+    );
+    expect(mapped.query).toBe("good");
+    expect(mapped.groups.segments).toHaveLength(1);
+    expect(mapped.groups.segments[0]).toMatchObject({
+      kind: "segment",
+      callId: "call-9",
+      snippet: "that sounds good",
+      startMs: 8000,
+    });
+    expect(mapped.groups.segments[0]?.evidence?.segmentIds).toEqual(["seg-1"]);
+    expect(mapped.groups.calls).toHaveLength(1);
+    expect(mapped.groups.calls[0]?.callId).toBe("call-9");
+    expect(mapped.groups.segments[0]?.title).toBe("Transcript match");
+    expect(mapped.total).toBe(2);
   });
 });

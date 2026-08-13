@@ -18,6 +18,7 @@ function readRuntimeApiBaseUrl(): string {
 
 const apiBaseUrl =
   readRuntimeApiBaseUrl() || stripTrailingSlash(import.meta.env.VITE_API_BASE_URL ?? "");
+const integrationApiBaseUrl = stripTrailingSlash(import.meta.env.VITE_INTEGRATION_API_BASE_URL ?? "");
 
 export const env = {
   apiBaseUrl,
@@ -28,4 +29,6 @@ export const env = {
     import.meta.env.VITE_NGROK_SKIP_BROWSER_WARNING,
     apiBaseUrl.includes("ngrok"),
   ),
+  integrationApiBaseUrl,
+  useMockIntegrations: readFlag(import.meta.env.VITE_USE_MOCK_INTEGRATIONS, !integrationApiBaseUrl),
 } as const;

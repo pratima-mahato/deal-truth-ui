@@ -110,6 +110,20 @@ function statusMessage(status: number): string {
   return STATUS_MESSAGES[status] ?? (status >= 500 ? "The API is unavailable." : "The request failed.");
 }
 
+export function userFacingMessage(error: unknown, fallback = "Something went wrong. Try again."): string {
+  if (error instanceof ApiError) return error.message;
+  if (error && typeof error === "object" && "name" in error && (error as { name?: string }).name === "ZodError") {
+    return fallback;
+  }
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (!message || message.startsWith("[") || message.startsWith("{")) return fallback;
+    if (message.length > 180) return fallback;
+    return message;
+  }
+  return fallback;
+}
+
 export function wrapFetchFailure(error: unknown, requestId?: string): ApiError {
   if (error instanceof ApiError) return error;
   const name = error instanceof Error ? error.name : "";

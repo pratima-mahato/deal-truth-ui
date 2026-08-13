@@ -2,7 +2,20 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
+export function resolveCallDurationMs(
+  callDurationMs?: number,
+  transcript?: { durationMs?: number; segments?: { startMs: number; endMs: number }[] },
+): number {
+  const fromCall = callDurationMs && callDurationMs > 0 ? callDurationMs : 0;
+  const fromTranscript = transcript?.durationMs && transcript.durationMs > 0 ? transcript.durationMs : 0;
+  const fromSegments = transcript?.segments?.length
+    ? Math.max(0, ...transcript.segments.map((segment) => Math.max(segment.endMs || 0, segment.startMs || 0)))
+    : 0;
+  return Math.max(fromCall, fromTranscript, fromSegments);
+}
+
 export function formatClock(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return "00:00";
   const total = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);

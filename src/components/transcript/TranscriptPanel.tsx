@@ -46,7 +46,7 @@ export function TranscriptPanel({
   });
 
   return (
-    <div className="flex h-full min-h-[28rem] flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="mb-3 flex gap-2">
         <Input
           value={query}

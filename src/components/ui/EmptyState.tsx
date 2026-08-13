@@ -31,7 +31,7 @@ export function ErrorState({
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-10 text-center">
       <h2 className="text-lg font-semibold text-red-900">{title}</h2>
-      <p className="mt-2 text-sm text-red-800">{description}</p>
+      <p className="mt-2 max-w-md text-sm text-red-800 break-words">{description}</p>
       {onRetry ? (
         <div className="mt-4">
           <Button variant="secondary" onClick={onRetry}>

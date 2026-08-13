@@ -37,7 +37,14 @@ export function AudioPlayerProvider({
   const [fileDurationMs, setFileDurationMs] = useState(0);
   const [playbackRate, setPlaybackRateState] = useState(1);
   const [volume, setVolumeState] = useState(1);
-  const durationMs = callDurationMs && callDurationMs > 0 ? callDurationMs : fileDurationMs;
+  const durationMs = callDurationMs && callDurationMs > 0 ? callDurationMs : 0;
+  const resolvedDuration = Math.max(durationMs, fileDurationMs);
+
+  const captureFileDuration = useCallback((audio: HTMLAudioElement) => {
+    const seconds = audio.duration;
+    if (!Number.isFinite(seconds) || seconds <= 0) return;
+    setFileDurationMs(seconds * 1000);
+  }, []);
 
   const mapToFile = useCallback((startMs: number, endMs: number) => {
     if (!env.useMocks) {
@@ -81,7 +88,7 @@ export function AudioPlayerProvider({
 
   const seekTo = useCallback(
     (startMs: number) => {
-      const clamped = Math.max(0, Math.min(startMs, durationMs || startMs));
+      const clamped = Math.max(0, Math.min(startMs, resolvedDuration || startMs));
       const audio = audioRef.current;
       if (!audio) return;
       const mapped = mapToFile(clamped, clamped + 1000);
@@ -89,7 +96,7 @@ export function AudioPlayerProvider({
       audio.currentTime = mapped.start / 1000;
       setCurrentMs(clamped);
     },
-    [durationMs, mapToFile],
+    [resolvedDuration, mapToFile],
   );
 
   const pause = useCallback(() => {
@@ -149,7 +156,7 @@ export function AudioPlayerProvider({
       setVolume,
       currentMs,
       playing,
-      durationMs,
+      durationMs: resolvedDuration,
       playbackRate,
       volume,
       audioRef,
@@ -165,7 +172,7 @@ export function AudioPlayerProvider({
       setVolume,
       currentMs,
       playing,
-      durationMs,
+      resolvedDuration,
       playbackRate,
       volume,
     ],
@@ -180,7 +187,8 @@ export function AudioPlayerProvider({
         onTimeUpdate={onTimeUpdate}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onLoadedMetadata={(e) => setFileDurationMs(e.currentTarget.duration * 1000)}
+        onLoadedMetadata={(e) => captureFileDuration(e.currentTarget)}
+        onDurationChange={(e) => captureFileDuration(e.currentTarget)}
       />
       {children}
     </AudioPlayerContext.Provider>

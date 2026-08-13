@@ -41,6 +41,9 @@ export function TopNav() {
           <NavLink to="/search" className={({ isActive }) => (isActive ? "text-ink-900" : "hover:text-ink-800")}>
             Search
           </NavLink>
+          <NavLink to="/integrations" className={({ isActive }) => (isActive ? "text-ink-900" : "hover:text-ink-800")}>
+            Integrations
+          </NavLink>
         </nav>
         <form onSubmit={onSearch} className="ml-auto flex min-w-0 flex-1 max-w-xl items-center gap-2">
           <div className="relative min-w-0 flex-1">

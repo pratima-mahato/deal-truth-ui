@@ -63,8 +63,12 @@ export default {
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "drawer-in": {
-          from: { transform: "translateX(16px)", opacity: "0" },
-          to: { transform: "translateX(0)", opacity: "1" },
+          from: { transform: "translateX(100%)" },
+          to: { transform: "translateX(0)" },
+        },
+        "backdrop-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
         },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
@@ -74,7 +78,8 @@ export default {
       animation: {
         "bar-pulse": "bar-pulse 1.1s ease-in-out infinite",
         "soft-in": "soft-in 0.35s ease-out",
-        "drawer-in": "drawer-in 0.28s ease-out",
+        "drawer-in": "drawer-in 0.24s cubic-bezier(0.16, 1, 0.3, 1)",
+        "backdrop-in": "backdrop-in 0.2s ease-out",
         shimmer: "shimmer 1.6s linear infinite",
       },
     },

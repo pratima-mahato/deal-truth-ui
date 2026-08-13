@@ -7,9 +7,13 @@ import { PageSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
 import { useCalls, useRecommendations, useSampleCall, useUploadFlow } from "@/hooks/useCallApi";
-import { formatDate, formatDuration } from "@/lib/utils";
+import { cn, formatDate, formatDuration } from "@/lib/utils";
 import { env } from "@/config/env";
-import { isReportReadyStatus } from "@/api/contracts";
+import { isReportReadyStatus, type Call } from "@/api/contracts";
+
+function callHref(call: Call) {
+  return isReportReadyStatus(call.status) ? `/calls/${call.id}/overview` : `/calls/${call.id}/processing`;
+}
 
 export function DashboardPage() {
   const calls = useCalls();
@@ -119,19 +123,46 @@ export function DashboardPage() {
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Duration</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 {showSignals ? <th className="hidden px-4 py-3 font-medium lg:table-cell">Signals</th> : null}
+                <th className="px-4 py-3 font-medium"><span className="sr-only">Open</span></th>
               </tr>
             </thead>
             <tbody>
               {items.map((call) => {
-                const href = isReportReadyStatus(call.status)
-                  ? `/calls/${call.id}/overview`
-                  : `/calls/${call.id}/processing`;
+                const href = callHref(call);
+                const ready = isReportReadyStatus(call.status);
+                const label = call.customerName || call.title || call.id;
+                const openRow = (event: { metaKey?: boolean; ctrlKey?: boolean; button?: number }) => {
+                  if (event.metaKey || event.ctrlKey || event.button === 1) {
+                    window.open(href, "_blank", "noopener,noreferrer");
+                    return;
+                  }
+                  navigate(href);
+                };
                 return (
-                  <tr key={call.id} className="border-t border-ink-100/80 hover:bg-violet-50/50">
+                  <tr
+                    key={call.id}
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`${ready ? "Open" : "View"} ${label}`}
+                    className="group cursor-pointer border-t border-ink-100/80 hover:bg-violet-50/50 focus-visible:bg-violet-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-400"
+                    onClick={openRow}
+                    onAuxClick={openRow}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        navigate(href);
+                      }
+                    }}
+                  >
                     <td className="px-4 py-3">
-                      <Link to={href} className="font-medium text-ink-900 hover:text-violet-700">
-                        {call.customerName || call.title || call.id}
-                      </Link>
+                      <p
+                        className={cn(
+                          "font-medium group-hover:underline",
+                          ready ? "text-violet-700" : "text-ink-900",
+                        )}
+                      >
+                        {label}
+                      </p>
                       <p className="text-xs text-ink-500">
                         {call.title} · {formatDate(call.createdAt)}
                       </p>
@@ -150,6 +181,11 @@ export function DashboardPage() {
                         </p>
                       </td>
                     ) : null}
+                    <td className="px-4 py-3 text-right">
+                      <span className="pointer-events-none inline-flex h-8 items-center rounded-lg border border-ink-100 bg-white px-3 text-sm font-medium text-ink-900">
+                        {ready ? "Open" : "View"}
+                      </span>
+                    </td>
                   </tr>
                 );
               })}

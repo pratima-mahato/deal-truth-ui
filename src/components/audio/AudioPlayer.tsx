@@ -21,7 +21,7 @@ export function AudioPlayer({
   const { playing, currentMs, durationMs, playbackRate, toggle, skip, seekTo, playFrom, setPlaybackRate, setVolume, volume } =
     useAudioPlayer();
   const speakers = transcript?.speakers ?? [];
-  const duration = durationMs || 1;
+  const duration = Math.max(durationMs, 1);
 
   return (
     <div className="rounded-xl border border-ink-100 bg-surface p-4 shadow-card">
@@ -110,7 +110,7 @@ export function AudioPlayer({
           />
         </div>
         <div className="ml-auto font-mono text-xs text-ink-500">
-          {formatClock(currentMs)} / {formatClock(durationMs)}
+          {formatClock(currentMs)} / {durationMs > 0 ? formatClock(durationMs) : "—"}
         </div>
       </div>
     </div>

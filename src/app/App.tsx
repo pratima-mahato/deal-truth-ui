@@ -5,6 +5,7 @@ import { UploadPage } from "@/pages/UploadPage";
 import { ProcessingPage } from "@/pages/ProcessingPage";
 import { CallDetailPage } from "@/pages/CallDetailPage";
 import { SearchPage } from "@/pages/SearchPage";
+import { IntegrationsPage } from "@/pages/IntegrationsPage";
 import { DemoPage, SharedPage } from "@/pages/SharedPage";
 
 export function App() {
@@ -17,6 +18,7 @@ export function App() {
         <Route path="/calls/:callId/processing" element={<ProcessingPage />} />
         <Route path="/calls/:callId/*" element={<CallDetailPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/integrations" element={<IntegrationsPage />} />
         <Route path="/shared/:token" element={<SharedPage />} />
         <Route path="/demo" element={<DemoPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

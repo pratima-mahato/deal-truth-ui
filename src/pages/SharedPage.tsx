@@ -18,10 +18,19 @@ import { AudioPlayer } from "@/components/audio/AudioPlayer";
 import { TranscriptPanel } from "@/components/transcript/TranscriptPanel";
 import { Card } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/Badge";
-import { formatDate, formatDuration } from "@/lib/utils";
+import { userFacingMessage } from "@/api/errors";
+import { formatDate, formatDuration, resolveCallDurationMs } from "@/lib/utils";
 
 export function SharedPage() {
-  const { token = "" } = useParams();
+  const params = useParams();
+  const token = (() => {
+    const raw = params.token ?? "";
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  })();
   const shared = useSharedReport(token);
 
   if (shared.isLoading) return <PageSkeleton />;
@@ -29,11 +38,10 @@ export function SharedPage() {
     return (
       <ErrorState
         title="Share link invalid"
-        description={
-          shared.error instanceof Error
-            ? shared.error.message
-            : "This report is missing, expired, revoked, or not ready yet."
-        }
+        description={userFacingMessage(
+          shared.error,
+          "This report is missing, expired, revoked, or not ready yet.",
+        )}
       />
     );
   }
@@ -42,7 +50,7 @@ export function SharedPage() {
 
   return (
     <EvidenceFocusProvider>
-      <AudioPlayerProvider src={callAudioUrl(report.call.id)}>
+      <AudioPlayerProvider src={callAudioUrl(report.call.id)} callDurationMs={resolveCallDurationMs(report.call.durationMs, transcript)}>
         <div>
           <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Shared report · read only</p>
           <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -50,7 +58,7 @@ export function SharedPage() {
             <StatusPill status={report.call.status} />
           </div>
           <p className="mb-4 text-sm text-slate-500">
-            {report.call.customerName} · {formatDate(report.call.createdAt)} · {formatDuration(report.call.durationMs)}
+            {report.call.customerName} · {formatDate(report.call.createdAt)} · {formatDuration(resolveCallDurationMs(report.call.durationMs, transcript))}
           </p>
           <div className="mb-5">
             <DealSignalStrip signals={report.dealSignals} />

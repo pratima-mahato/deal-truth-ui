@@ -4,6 +4,7 @@ import {
   CUSTOMER_TRUTH_CATEGORIES,
   FAILURE_KINDS,
   INSIGHT_TYPES,
+  SEARCH_RESULT_KINDS,
   SPEAKER_ROLES,
   TERMINAL_OUTCOMES,
   type Call,
@@ -27,10 +28,14 @@ import {
   followUpEmailSchema,
   insightSchema,
   shareLinkSchema,
+  searchResponseSchema,
   type AskAnswer,
   type FollowUpEmail,
   type ShareLink,
   type SharedReport,
+  type SearchResponse,
+  type SearchResult,
+  type SearchResultKind,
 } from "./contracts";
 
 type Dict = Record<string, unknown>;
@@ -245,10 +250,23 @@ export function mapTranscript(raw: unknown): Transcript {
       speakerRole: roleRaw != null ? asRole(roleRaw) : undefined,
     };
   });
+  segments.sort((a, b) => {
+    if (a.sequenceNumber !== b.sequenceNumber && (a.sequenceNumber || b.sequenceNumber)) {
+      return a.sequenceNumber - b.sequenceNumber;
+    }
+    return a.startMs - b.startMs;
+  });
+  const durationMsRaw = pick(obj, "duration_ms", "durationMs");
+  const durationMs =
+    durationMsRaw != null && num(durationMsRaw) > 0
+      ? num(durationMsRaw)
+      : segments.length
+        ? Math.max(...segments.map((segment) => Math.max(segment.endMs, segment.startMs)))
+        : undefined;
   return {
     callId: str(pick(obj, "call_id", "callId")),
     language: str(pick(obj, "language"), "en"),
-    durationMs: typeof pick(obj, "duration_ms", "durationMs") === "number" ? num(pick(obj, "duration_ms", "durationMs")) : undefined,
+    durationMs,
     text: str(pick(obj, "text")) || segments.map((s) => s.text).join(" "),
     speakers,
     segments,
@@ -682,12 +700,15 @@ export function mapFollowUp(raw: unknown): FollowUpEmail {
 
 export function mapShareLink(raw: unknown): ShareLink {
   const obj = asRecord(raw);
-  const token = str(pick(obj, "token"));
   const rawUrl = str(pick(obj, "url"));
+  const fromUrl = rawUrl.match(/\/(?:api\/v1\/)?shared\/([^/?#]+)/)?.[1];
+  const token =
+    str(pick(obj, "token", "share_token", "shareToken", "public_token", "publicToken")) ||
+    (fromUrl ? decodeURIComponent(fromUrl) : "");
   return shareLinkSchema.parse({
-    id: str(pick(obj, "id")),
+    id: str(pick(obj, "id"), token),
     token,
-    url: token ? `/shared/${token}` : rawUrl,
+    url: token ? `/shared/${encodeURIComponent(token)}` : rawUrl,
     expiresAt: str(pick(obj, "expires_at", "expiresAt")) || undefined,
   });
 }
@@ -700,4 +721,88 @@ export function mapShared(raw: unknown): SharedReport {
     report: mapReport(reportRaw),
     transcript: mapTranscript(transcriptRaw ?? { call_id: "", speakers: [], segments: [] }),
   };
+}
+
+function asSearchKind(value: unknown, fallback: SearchResultKind): SearchResultKind {
+  const kind = str(value, fallback);
+  return (SEARCH_RESULT_KINDS as readonly string[]).includes(kind) ? (kind as SearchResultKind) : fallback;
+}
+
+export function mapSearchResult(raw: unknown, fallbackKind: SearchResultKind = "segment"): SearchResult {
+  const obj = asRecord(raw);
+  const callTitle =
+    str(pick(obj, "call_title", "callTitle", "customer_name", "customerName", "call_name", "callName")) || "Call";
+  const snippet = str(pick(obj, "snippet", "text", "summary", "body"));
+  const callId = str(pick(obj, "call_id", "callId"));
+  const startMsRaw = pick(obj, "start_ms", "startMs");
+  const startMs = startMsRaw == null ? undefined : num(startMsRaw);
+  const explicitTitle = str(pick(obj, "title"));
+  const title =
+    fallbackKind === "segment"
+      ? callTitle !== "Call"
+        ? callTitle
+        : "Transcript match"
+      : explicitTitle || callTitle || (snippet ? snippet.slice(0, 96) : "Match");
+  const id = str(pick(obj, "id")) || `${fallbackKind}-${callId || "call"}-${startMs ?? title.slice(0, 12)}`;
+  const evidenceRaw = pick(obj, "evidence");
+  const segmentId = str(pick(obj, "segment_id", "segmentId"));
+  const evidence = evidenceRaw
+    ? mapEvidence(evidenceRaw)
+    : fallbackKind === "segment" && str(pick(obj, "id"))
+      ? { segmentIds: [str(pick(obj, "id"))] }
+      : segmentId
+        ? { segmentIds: [segmentId] }
+        : undefined;
+  return {
+    id,
+    kind: asSearchKind(pick(obj, "kind"), fallbackKind),
+    callId,
+    callTitle,
+    title,
+    snippet,
+    insightType: (() => {
+      const type = str(pick(obj, "insight_type", "insightType"));
+      return (INSIGHT_TYPES as readonly string[]).includes(type) ? (type as SearchResult["insightType"]) : undefined;
+    })(),
+    evidence,
+    startMs,
+  };
+}
+
+/** Live search may return `{ segments: [{ call_id, text, start_ms }] }` instead of grouped camelCase. */
+export function mapSearchResponse(raw: unknown, query = ""): SearchResponse {
+  const obj = asRecord(raw);
+  const grouped = asRecord(pick(obj, "groups"));
+  const hasGroups = Object.keys(grouped).length > 0;
+  const insights = asArray(
+    hasGroups ? pick(grouped, "insights") : pick(obj, "insights"),
+  ).map((item) => mapSearchResult(item, "insight"));
+  const segments = asArray(
+    hasGroups ? pick(grouped, "segments") : pick(obj, "segments", "results"),
+  ).map((item) => mapSearchResult(item, "segment"));
+  const calls = asArray(hasGroups ? pick(grouped, "calls") : pick(obj, "calls")).map((item) =>
+    mapSearchResult(item, "call"),
+  );
+  if (calls.length === 0) {
+    const seen = new Set<string>();
+    for (const segment of segments) {
+      if (!segment.callId || seen.has(segment.callId)) continue;
+      seen.add(segment.callId);
+      calls.push({
+        id: `call-${segment.callId}`,
+        kind: "call",
+        callId: segment.callId,
+        callTitle: segment.callTitle,
+        title: segment.callTitle !== "Call" ? segment.callTitle : "Matching call",
+        snippet: segment.snippet,
+      });
+    }
+  }
+  const mapped = {
+    query: str(pick(obj, "query", "q"), query),
+    groups: { insights, segments, calls },
+    total: insights.length + segments.length + calls.length,
+  };
+  const parsed = searchResponseSchema.safeParse(mapped);
+  return parsed.success ? parsed.data : mapped;
 }

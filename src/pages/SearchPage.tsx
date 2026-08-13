@@ -3,11 +3,10 @@ import { Input } from "@/components/ui/Input";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { useSearch } from "@/hooks/useCallApi";
-import { ApiError } from "@/api/errors";
+import { ApiError, userFacingMessage } from "@/api/errors";
 import type { SearchResult } from "@/api/contracts";
-import { formatClock } from "@/lib/utils";
+import { cn, formatClock } from "@/lib/utils";
 
 const SUGGESTIONS = [
   "pricing objections",
@@ -17,41 +16,45 @@ const SUGGESTIONS = [
   "Competitor mentions",
 ];
 
-function ResultList({ title, items }: { title: string; items: SearchResult[] }) {
-  if (!items.length) return null;
+const openLinkClass =
+  "inline-flex h-8 shrink-0 items-center rounded-lg border border-ink-100 bg-white px-3 text-sm font-medium text-ink-900 hover:border-violet-200 hover:bg-violet-50";
+
+function resultHref(item: SearchResult): string {
+  if (!item.callId) return "/search";
+  const segment = item.kind === "segment" ? item.evidence?.segmentIds[0] : undefined;
+  if (segment) return `/calls/${item.callId}/transcript?segment=${segment}&play=1`;
+  return `/calls/${item.callId}/overview`;
+}
+
+function ResultList({ title, items, actionLabel }: { title: string; items: SearchResult[]; actionLabel: string }) {
+  const visible = items.filter((item) => item.callId);
+  if (!visible.length) return null;
   return (
     <section className="mb-8">
       <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">{title}</h2>
       <ul className="space-y-2">
-        {items.map((item) => {
-          const segment = item.evidence?.segmentIds[0];
-          const to =
-            segment != null
-              ? `/calls/${item.callId}/transcript?segment=${segment}&play=1`
-              : `/calls/${item.callId}/overview`;
+        {visible.map((item) => {
+          const href = resultHref(item);
+          const showQuote = item.snippet && item.snippet !== item.title;
           return (
             <li key={item.id}>
               <Link
-                to={to}
-                className="block rounded-xl border border-ink-100 bg-surface px-5 py-4 transition hover:border-violet-200 hover:shadow-card"
+                to={href}
+                className="flex flex-col gap-3 rounded-xl border border-ink-100 bg-surface px-5 py-4 transition hover:border-violet-200 hover:shadow-card sm:flex-row sm:items-start sm:justify-between"
               >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-ink-900">{item.title}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink-900">{item.title}</p>
+                  {showQuote ? (
                     <p className="mt-1 text-sm leading-relaxed text-ink-600">“{item.snippet}”</p>
-                    <p className="mt-2 text-xs text-ink-400">
-                      {item.callTitle}
-                      {item.startMs != null ? ` · ${formatClock(item.startMs)}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-start gap-2 sm:items-end">
-                    {item.insightType ? <Badge tone="violet">{item.insightType.replace("_", " ")}</Badge> : null}
-                    {segment != null ? (
-                      <Button size="sm" variant="secondary">
-                        Open evidence
-                      </Button>
-                    ) : null}
-                  </div>
+                  ) : null}
+                  <p className="mt-2 text-xs text-ink-400">
+                    {item.callTitle !== item.title ? item.callTitle : "Call"}
+                    {item.startMs != null ? ` · ${formatClock(item.startMs)}` : ""}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {item.insightType ? <Badge tone="violet">{item.insightType.replace("_", " ")}</Badge> : null}
+                  <span className={openLinkClass}>{actionLabel}</span>
                 </div>
               </Link>
             </li>
@@ -83,6 +86,7 @@ export function SearchPage() {
         }}
       >
         <Input
+          key={q}
           name="q"
           defaultValue={q}
           placeholder="Search conversations, insights, objections..."
@@ -95,7 +99,10 @@ export function SearchPage() {
           <button
             key={item}
             type="button"
-            className="rounded-full border border-ink-100 bg-white px-3 py-1 text-xs text-ink-600 hover:border-violet-200 hover:text-violet-700"
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs hover:border-violet-200 hover:text-violet-700",
+              q === item ? "border-violet-300 bg-violet-50 text-violet-800" : "border-ink-100 bg-white text-ink-600",
+            )}
             onClick={() => setParams({ q: item })}
           >
             {item}
@@ -119,16 +126,16 @@ export function SearchPage() {
         ) : search.isError ? (
           <ErrorState
             title="Search failed"
-            description={search.error instanceof Error ? search.error.message : "Try again."}
+            description={userFacingMessage(search.error, "Could not load search results. Try a different query.")}
             onRetry={() => void search.refetch()}
           />
         ) : search.data && search.data.total === 0 ? (
           <EmptyState title="No matches" description={`Nothing in shipped calls matched “${q}”.`} />
         ) : search.data ? (
           <>
-            <ResultList title="Insights" items={search.data.groups.insights} />
-            <ResultList title="Transcript" items={search.data.groups.segments} />
-            <ResultList title="Calls" items={search.data.groups.calls} />
+            <ResultList title="Calls" items={search.data.groups.calls} actionLabel="Open" />
+            <ResultList title="Transcript" items={search.data.groups.segments} actionLabel="Open evidence" />
+            <ResultList title="Insights" items={search.data.groups.insights} actionLabel="Open" />
           </>
         ) : null}
       </div>
