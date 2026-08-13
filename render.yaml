@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: deal-truth-ui
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    envVars:
+      # Deal Truth API origin, e.g. https://deal-truth-api.onrender.com
+      # nginx proxies same-origin /api/ to this URL (recommended; avoids CORS).
+      - key: API_UPSTREAM
+        sync: false
+      # Optional. Only set this if the browser should call the API directly
+      # instead of through the nginx proxy (requires CORS on the API).
+      - key: API_BASE_URL
+        value: ""
