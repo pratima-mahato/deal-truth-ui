@@ -4,7 +4,11 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+# --include=dev: Render sets NODE_ENV=production at build time, which would
+# otherwise skip Vite/TypeScript. --legacy-peer-deps: npm ci in Node 22 is
+# stricter about peer deps than some local npm versions.
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+RUN npm ci --no-audit --no-fund --include=dev --legacy-peer-deps
 
 COPY . .
 
