@@ -32,6 +32,19 @@ type Cmd = {
   run: () => void;
 };
 
+function highlightBrand(text: string) {
+  const brand = "Deal Truth";
+  const at = text.indexOf(brand);
+  if (at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <span className="mark-saffron">{brand}</span>
+      {text.slice(at + brand.length)}
+    </>
+  );
+}
+
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
@@ -64,10 +77,9 @@ export function DemoLayer() {
     [navigate],
   );
 
-  const beats: Beat[] = useMemo(
-    () => [
+  const beats: Beat[] = [
       {
-        cap: "Gong charges $1,400 a seat for this.",
+        cap: "Deal Truth does this without a $1,400 seat.",
         sub: "Six calls, analysed. Every claim in here is backed by audio you can play.",
         go: () => navigate("/"),
         spot: ".rows",
@@ -148,9 +160,7 @@ export function DemoLayer() {
         go: () => navigate("/demo"),
         spot: null,
       },
-    ],
-    [goCall, navigate],
-  );
+  ];
 
   const commands: Cmd[] = useMemo(
     () => [
@@ -437,7 +447,7 @@ export function DemoLayer() {
               {String(beatIndex + 1).padStart(2, "0")} / {BEAT_COUNT}
             </div>
             <div className="stage-txt">
-              <div className="stage-cap">{beats[beatIndex]?.cap}</div>
+              <div className="stage-cap">{highlightBrand(beats[beatIndex]?.cap ?? "")}</div>
               <div className="stage-sub">{beats[beatIndex]?.sub}</div>
             </div>
             <div className="stage-ctl">

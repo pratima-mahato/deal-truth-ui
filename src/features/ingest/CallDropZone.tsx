@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { FileAudio } from "lucide-react";
 import { formatBytes } from "@/lib/utils";
 import { LiveWaveform } from "@/components/audio/Waveform";
-import { cn } from "@/lib/utils";
 
 const ALLOWED_EXT = /\.(mp3|wav|m4a|mp4|webm|ogg)$/i;
 const MAX_BYTES = 80 * 1024 * 1024;
@@ -33,7 +31,7 @@ export function CallDropZone({
 
   if (file) {
     return (
-      <div className="drop" style={{ marginBottom: 18 }}>
+      <div className="drop" style={{ marginBottom: 18, cursor: "default" }}>
         <LiveWaveform active={false} />
         <div style={{ fontWeight: 700, margin: "10px 0 4px" }}>{file.name}</div>
         <div className="tiny">{formatBytes(file.size)}</div>
@@ -52,7 +50,7 @@ export function CallDropZone({
 
   return (
     <label
-      className={cn("drop")}
+      className="drop"
       style={{ marginBottom: 18, borderColor: over ? "var(--brand)" : undefined, background: over ? "var(--brand-soft)" : undefined }}
       onDragOver={(e) => {
         e.preventDefault();
@@ -67,7 +65,7 @@ export function CallDropZone({
     >
       <input
         type="file"
-        className="sr-only"
+        aria-label="Upload a call recording"
         accept=".mp3,.wav,.m4a,.mp4,.webm,.ogg,audio/*,video/mp4"
         onChange={(e) => take(e.target.files?.[0] ?? null)}
       />
@@ -76,7 +74,6 @@ export function CallDropZone({
       </div>
       <div style={{ fontWeight: 700, marginBottom: 4 }}>Drop a recording, or paste a link</div>
       <div className="tiny">mp3 · wav · m4a · webm — up to 80 MB. Five sample calls ship in the repo.</div>
-      <FileAudio className="sr-only" />
     </label>
   );
 }

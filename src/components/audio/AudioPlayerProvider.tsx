@@ -85,9 +85,32 @@ export function AudioPlayerProvider({
 
   const playFrom = useCallback(
     async (logicalMs: number) => {
-      await playRange(logicalMs, logicalMs + 8000);
+      const audio = audioRef.current;
+      if (!audio) return;
+      const start = Math.max(0, logicalMs);
+      setActiveRange(null);
+      setCurrentMs(start);
+      const fileLen = audio.duration && Number.isFinite(audio.duration) ? audio.duration * 1000 : 0;
+      const mapped = mapToFile(start, fileLen > 0 ? fileLen : start + 1);
+      originRef.current = { logical: start, file: mapped.start };
+      stopAtRef.current = null;
+      if (audio.readyState >= 1) {
+        audio.currentTime = mapped.start / 1000;
+      }
+      try {
+        await audio.play();
+      } catch {
+        await new Promise<void>((resolve) => {
+          audio.addEventListener("loadedmetadata", () => resolve(), { once: true });
+          window.setTimeout(() => resolve(), 800);
+        });
+        const again = mapToFile(start, audio.duration && Number.isFinite(audio.duration) ? audio.duration * 1000 : start + 1);
+        originRef.current = { logical: start, file: again.start };
+        audio.currentTime = again.start / 1000;
+        await audio.play().catch(() => undefined);
+      }
     },
-    [playRange],
+    [mapToFile],
   );
 
   const seekTo = useCallback(
@@ -114,8 +137,9 @@ export function AudioPlayerProvider({
       audio.pause();
       return;
     }
-    void playFrom(currentMs);
-  }, [currentMs, playFrom]);
+    const nearEnd = durationMs > 0 && currentMs >= durationMs - 250;
+    void playFrom(nearEnd ? 0 : currentMs);
+  }, [currentMs, durationMs, playFrom]);
 
   const skip = useCallback(
     (deltaMs: number) => {

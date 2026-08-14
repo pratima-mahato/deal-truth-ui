@@ -8,7 +8,6 @@ import { SearchPage } from "@/pages/SearchPage";
 import { IntegrationsPage } from "@/pages/IntegrationsPage";
 import { DemoPage, SharedPage } from "@/pages/SharedPage";
 import { DealPage } from "@/pages/DealPage";
-import { IntegrationsPage } from "@/pages/IntegrationsPage";
 
 export function App() {
   return (

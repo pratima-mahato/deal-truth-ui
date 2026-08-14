@@ -19,7 +19,7 @@ export function TranscriptPanel({
   callId?: string;
 }) {
   const { focus, setFocus } = useEvidenceFocus();
-  const { playRange, currentMs, playing, activeRange } = useAudioPlayer();
+  const { playFrom, currentMs, playing } = useAudioPlayer();
   const [query, setQuery] = useState("");
   const [speakerFilter, setSpeakerFilter] = useState<"all" | "customer" | "seller">("all");
   const [askQ, setAskQ] = useState("");
@@ -35,11 +35,10 @@ export function TranscriptPanel({
       const segs = transcript.segments.filter((s) => focus.segmentIds.includes(s.id));
       if (segs.length) {
         const start = Math.min(...segs.map((s) => s.startMs));
-        const end = Math.max(...segs.map((s) => s.endMs));
-        void playRange(start, end);
+        void playFrom(start);
       }
     }
-  }, [focus, playRange, transcript.segments]);
+  }, [focus, playFrom, transcript.segments]);
 
   const activeByTime = transcript.segments.find((s) => currentMs >= s.startMs && currentMs <= s.endMs)?.id;
 
@@ -119,10 +118,9 @@ export function TranscriptPanel({
           const speaker = transcript.speakers.find((s) => s.id === segment.speakerId);
           const active = focused.has(segment.id) || activeByTime === segment.id;
           const marks = annotations?.get(segment.id) ?? [];
-          const inRange =
-            playing && activeRange && currentMs >= segment.startMs && currentMs <= segment.endMs;
+          const inRange = playing && currentMs >= segment.startMs && currentMs <= segment.endMs;
           const pctDone =
-            inRange && activeRange && activeRange.endMs > activeRange.startMs
+            inRange && segment.endMs > segment.startMs
               ? Math.min(1, Math.max(0, (currentMs - segment.startMs) / (segment.endMs - segment.startMs)))
               : 0;
           const roleClass = speaker?.role === "customer" ? "customer" : speaker?.role === "seller" ? "seller" : "";
