@@ -85,7 +85,7 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-With an empty `VITE_API_BASE_URL`, the app starts **Mock Service Worker** automatically. You get a full workspace — including the Acme SaaS Labs sample call — without a backend.
+With an empty `VITE_API_BASE_URL`, the app starts **Mock Service Worker** automatically. You get a full workspace — including the Example Inc. sample call — without a backend.
 
 To talk to a live Deal Truth API:
 
@@ -114,7 +114,7 @@ Copy [`.env.example`](.env.example). Values are read at build time (`VITE_*`).
 | --- | --- |
 | `VITE_API_BASE_URL` | Deal Truth API origin. Empty → mocks unless you force them off. |
 | `VITE_USE_MOCKS` | `true` / `false`. Defaults to **on** when no API URL is set. |
-| `VITE_DEMO_CALL_ID` | Call opened by `/demo` (default `call-acme-saas-labs`). |
+| `VITE_DEMO_CALL_ID` | Call opened by `/demo` (default `call-demo`). |
 | `VITE_API_KEY` | Optional. Sent as `X-API-Key`. Never commit a real key. |
 | `VITE_INTEGRATION_API_BASE_URL` | HubSpot/Slack integration service origin. Browser calls `{origin}/v1/sync` and `{origin}/v1/health`. Empty → same-origin `/integrations-api` proxy. |
 | `VITE_INTEGRATION_API_TOKEN` | Integration API token, sent as `Authorization: Bearer`. Visible in the Vite bundle — use `INTEGRATION_API_TOKEN` on Docker/Render instead. |

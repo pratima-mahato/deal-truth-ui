@@ -1,7 +1,9 @@
-import type { Call, CallReport, FollowUpEmail, Transcript } from "@/api/contracts";
-import { CALL_STATUSES, PROCESSING_STAGES, isTerminalStatus, type CallStatus } from "@/api/contracts";
-import { ACME_CALL_ID, buildAcmeTranscript } from "./fixtures/acmeTranscript";
-import { acmeCall, buildAcmeInsights, buildAcmeReport } from "./fixtures/acmeReport";
+import type { Call, CallReport, CallRefusals, Deal, FollowUpEmail, Transcript } from "@/api/contracts";
+import { CALL_STATUSES, PROCESSING_STAGES, isReportReadyStatus, isTerminalStatus, type CallStatus } from "@/api/contracts";
+import { DEMO_CALL_ID, buildDemoTranscript } from "./fixtures/demoTranscript";
+import { demoCall, buildDemoInsights, buildDemoReport } from "./fixtures/demoReport";
+import { DEMO_DEAL_ALIASES, DEMO_REFUSALS, demoDeal, demoGateSnapshot } from "./fixtures/demoDeal";
+import { toWireCall } from "./toWire";
 import {
   helixCall,
   helixReport,
@@ -39,11 +41,11 @@ function nowIso(): string {
 
 function seed(): Map<string, StoreCall> {
   const map = new Map<string, StoreCall>();
-  map.set(ACME_CALL_ID, {
-    call: clone(acmeCall),
-    transcript: buildAcmeTranscript(),
-    report: buildAcmeReport(),
-    shareToken: "share-acme-demo",
+  map.set(DEMO_CALL_ID, {
+    call: clone(demoCall),
+    transcript: buildDemoTranscript(),
+    report: buildDemoReport(),
+    shareToken: "share-demo",
   });
   map.set(northstarCall.id, {
     call: clone(northstarCall),
@@ -95,7 +97,7 @@ export const mockStore = {
   insights(id: string) {
     const record = getRecord(id);
     if (!record.report) return [];
-    return buildAcmeInsights(record.report);
+    return buildDemoInsights(record.report);
   },
 
   create(input: {
@@ -126,7 +128,7 @@ export const mockStore = {
   loadSample(): Call {
     const call = this.create({
       title: "Enterprise sales discovery (sample)",
-      customerName: "Sarah Mitchell · Acme Inc.",
+      customerName: "Sarah Mitchell · Example Inc.",
       repName: "Rahul Mehta",
       callDirection: "outbound",
       sourceType: "sample",
@@ -197,8 +199,8 @@ export const mockStore = {
 
   complete(id: string): void {
     const record = getRecord(id);
-    const report = buildAcmeReport({
-      ...clone(acmeCall),
+    const report = buildDemoReport({
+      ...clone(demoCall),
       id,
       title: record.call.title,
       customerName: record.call.customerName,
@@ -207,7 +209,7 @@ export const mockStore = {
       sourceType: record.call.sourceType,
       createdAt: record.call.createdAt,
     });
-    record.transcript = buildAcmeTranscript(id);
+    record.transcript = buildDemoTranscript(id);
     record.report = report;
     record.call = {
       ...report.call,
@@ -244,6 +246,9 @@ export const mockStore = {
 
   events(id: string) {
     const record = getRecord(id);
+    if (id === DEMO_CALL_ID && isReportReadyStatus(record.call.status)) {
+      return demoGateSnapshot(id);
+    }
     const current = CALL_STATUSES.indexOf(record.call.status);
     const events = PROCESSING_STAGES.filter((stage) => CALL_STATUSES.indexOf(stage.status) <= current).map(
       (stage, index) => ({
@@ -261,6 +266,54 @@ export const mockStore = {
       }),
     );
     return { callId: id, status: record.call.status, events };
+  },
+
+  deal(id: string): Deal {
+    if (!DEMO_DEAL_ALIASES.has(id)) {
+      throw Object.assign(new Error("Deal not found"), { code: "NOT_FOUND" });
+    }
+    return clone(demoDeal);
+  },
+
+  refusals(id: string): CallRefusals {
+    getRecord(id);
+    if (id === DEMO_CALL_ID) {
+      return { ...clone(DEMO_REFUSALS), callId: id };
+    }
+    return { callId: id, refusedCount: 0, shippedCount: 0, refusals: [] };
+  },
+
+  overview() {
+    const items = this.list();
+    const byStatus: Record<string, number> = {};
+    let shipped = 0;
+    let partial = 0;
+    let failed = 0;
+    let cancelled = 0;
+    let processing = 0;
+    let totalDurationMs = 0;
+    for (const call of items) {
+      byStatus[call.status] = (byStatus[call.status] ?? 0) + 1;
+      totalDurationMs += call.durationMs;
+      if (call.status === "SHIPPED") shipped += 1;
+      else if (call.status === "PARTIAL") partial += 1;
+      else if (call.status === "FAILED") failed += 1;
+      else if (call.status === "CANCELLED") cancelled += 1;
+      else processing += 1;
+    }
+    const demo = records.get(DEMO_CALL_ID);
+    return {
+      total_calls: items.length,
+      by_status: byStatus,
+      shipped,
+      partial,
+      failed,
+      cancelled,
+      processing,
+      total_duration_ms: totalDurationMs,
+      insight_counts: { CUSTOMER_FACT: demo?.report?.shippedCount ?? 0 },
+      recent_calls: items.slice(0, 10).map(toWireCall),
+    };
   },
 
   swapSpeakers(id: string): Transcript {
@@ -523,7 +576,7 @@ function matchesQuery(text: string, query: string): boolean {
     pricing: ["price", "commercial", "budget"],
     objections: ["objection", "concern", "risk"],
     integrations: ["salesforce", "crm", "integration"],
-    competitor: ["acmeai", "competition"],
+    competitor: ["nexusai", "competition"],
     intent: ["buying", "move forward"],
   };
   return q

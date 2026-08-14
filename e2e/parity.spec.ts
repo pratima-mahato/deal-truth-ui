@@ -39,7 +39,7 @@ const EXACT = new Set([
 ]);
 const TOLERANCE = 0.25;
 
-const CALL = "call-acme-saas-labs";
+const CALL = "call-demo";
 const ROUTES: Record<string, string> = {
   workspace: "/",
   search: "/search",
@@ -49,7 +49,7 @@ const ROUTES: Record<string, string> = {
   "call:act": `/calls/${CALL}/act`,
   "call:brief": `/calls/${CALL}/brief`,
   processing: `/calls/${CALL}/processing`,
-  deal: "/deals/acme",
+  deal: "/deals/demo",
   integrations: "/integrations",
 };
 

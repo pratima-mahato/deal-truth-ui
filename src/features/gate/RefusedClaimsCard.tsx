@@ -1,7 +1,6 @@
 import type { ProcessingEvent } from "@/api/contracts";
 import { EvidenceStamp } from "@/components/evidence/EvidenceStamp";
-import { getCallEvents } from "@/api/endpoints/calls";
-import { useQuery } from "@tanstack/react-query";
+import { useCallRefusals } from "@/hooks/useCallApi";
 
 export type RefusedClaim = {
   id: string;
@@ -10,58 +9,55 @@ export type RefusedClaim = {
   why: string;
 };
 
-export const ACME_REFUSALS: RefusedClaim[] = [
-  {
-    id: "r1",
-    code: "EVIDENCE_UNSUPPORTED",
-    claim: "Customer has budget approved for this quarter",
-    why: "No customer segment states a budget approval or a quarterly envelope.",
-  },
-  {
-    id: "r2",
-    code: "EVIDENCE_WRONG_SPEAKER",
-    claim: "Sarah confirmed a follow-up meeting",
-    why: "The cited segment is the seller speaking. Customer-only claims cannot rest on seller turns.",
-  },
-  {
-    id: "r3",
-    code: "EVIDENCE_UNSUPPORTED",
-    claim: "Customer said pricing is acceptable",
-    why: "The quote is not in the transcript. The customer said the price was almost double.",
-  },
-  {
-    id: "r4",
-    code: "EVIDENCE_SEGMENT_MISSING",
-    claim: "VP of Operations is the decision maker",
-    why: "The segment id on the candidate claim does not exist in this transcript.",
-  },
-];
-
 export function refusalsFromEvents(events: ProcessingEvent[]): RefusedClaim[] {
-  const failed = events.filter(
-    (event) =>
-      event.state === "failed" &&
-      (event.errorCode?.startsWith("EVIDENCE_") || /validate/i.test(event.stage) || /validate/i.test(event.message)),
-  );
-  if (failed.length >= 4) {
-    return failed.map((event) => ({
+  return events
+    .filter(
+      (event) =>
+        event.state === "failed" &&
+        (event.errorCode?.startsWith("EVIDENCE_") || /validate/i.test(event.stage) || /validate/i.test(event.message)),
+    )
+    .map((event) => ({
       id: event.id,
       code: event.errorCode ?? "EVIDENCE_UNSUPPORTED",
       claim: event.message,
       why: event.message,
     }));
-  }
-  return ACME_REFUSALS;
 }
 
 export function RefusedClaimsCard({ events, callId }: { events?: ProcessingEvent[]; callId?: string }) {
-  const queried = useQuery({
-    queryKey: ["events", callId],
-    queryFn: () => getCallEvents(callId!),
-    enabled: !!callId && events == null,
-    retry: false,
-  });
-  const refusals = refusalsFromEvents(events ?? queried.data ?? []);
+  const queried = useCallRefusals(callId ?? "", events == null && !!callId);
+  const fromApi = queried.data?.refusals ?? [];
+  const fromEvents = events ? refusalsFromEvents(events) : [];
+  const refusals = fromApi.length ? fromApi : fromEvents;
+  const loading = queried.isLoading && events == null;
+
+  if (loading) return null;
+  if (queried.isError && events == null && !fromApi.length) {
+    return (
+      <div className="card pad-lg reveal" style={{ borderColor: "var(--blocker-line)" }}>
+        <div className="h-sec" style={{ color: "var(--blocker)", marginBottom: 6 }}>
+          Refused claims unavailable
+        </div>
+        <div className="sub" style={{ fontSize: 12.5 }}>
+          {queried.error instanceof Error ? queried.error.message : "The refusals endpoint did not respond."}
+        </div>
+      </div>
+    );
+  }
+
+  if (!refusals.length) {
+    return (
+      <div className="card pad-lg reveal">
+        <div className="h-sec" style={{ marginBottom: 6 }}>
+          Evidence gate
+        </div>
+        <div className="sub" style={{ fontSize: 12.5 }}>
+          The gate refused {queried.data?.refusedCount ?? 0} claims on this run. Zero is expected when extractors only emit evidenced facts.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="card pad-lg reveal" style={{ borderColor: "var(--blocker-line)" }}>
       <div className="between" style={{ marginBottom: 6 }}>

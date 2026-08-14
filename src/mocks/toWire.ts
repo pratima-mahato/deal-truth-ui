@@ -1,4 +1,4 @@
-import type { Call, CallReport, FollowUpEmail, Insight, ProcessingSnapshot, Transcript } from "@/api/contracts";
+import { DEAL_DIMENSION_IDS, type Call, type CallReport, type Deal, type FollowUpEmail, type Insight, type ProcessingSnapshot, type Transcript } from "@/api/contracts";
 
 function camelToSnake(key: string): string {
   return key.replace(/[A-Z]/g, (ch) => `_${ch.toLowerCase()}`);
@@ -12,6 +12,11 @@ export function toSnakeKeys(value: unknown): unknown {
     );
   }
   return value;
+}
+
+function toWireSignalPips(pips: Call["signalPips"]): Record<string, string> {
+  const states = pips ?? [];
+  return Object.fromEntries(DEAL_DIMENSION_IDS.map((id, index) => [id, states[index] ?? "missing"]));
 }
 
 export function toWireCall(call: Call): Record<string, unknown> {
@@ -33,9 +38,51 @@ export function toWireCall(call: Call): Record<string, unknown> {
     failure_kind: call.failureKind ?? null,
     language: call.language,
     completed_at: call.completedAt ?? null,
+    deal_id: call.dealId ?? null,
+    top_risk: call.biggestRisk ?? null,
     biggest_risk: call.biggestRisk ?? null,
     signal_badges: call.signalBadges ?? [],
-    signal_pips: call.signalPips ?? [],
+    signal_pips: toWireSignalPips(call.signalPips),
+  };
+}
+
+export function toWireDeal(deal: Deal): Record<string, unknown> {
+  return {
+    id: deal.id,
+    account_name: deal.accountName,
+    primary_contact: deal.primaryContact ?? null,
+    rep_name: deal.repName ?? null,
+    call_count: deal.callCount,
+    span_days: deal.spanDays,
+    calls: deal.calls.map((call) => ({
+      call_id: call.callId,
+      title: call.title,
+      created_at: call.createdAt,
+      duration_ms: call.durationMs,
+      dimension_states: call.states,
+    })),
+    deltas: deal.deltas.map((delta) => ({
+      dimension: delta.dimension,
+      from: delta.from,
+      to: delta.to,
+      call_id: delta.callId ?? null,
+      note: delta.note ?? null,
+    })),
+  };
+}
+
+export function toWireRefusals(refusals: { callId: string; refusedCount: number; shippedCount: number; refusals: Array<{ id: string; code: string; claim: string; why: string; insightType?: string }> }): Record<string, unknown> {
+  return {
+    call_id: refusals.callId,
+    refused_count: refusals.refusedCount,
+    shipped_count: refusals.shippedCount,
+    refusals: refusals.refusals.map((row) => ({
+      id: row.id,
+      insight_type: row.insightType ?? null,
+      title: row.claim,
+      error_code: row.code,
+      drop_reason: row.why,
+    })),
   };
 }
 

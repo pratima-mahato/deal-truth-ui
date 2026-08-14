@@ -82,6 +82,21 @@ export type CommitmentStatus = (typeof COMMITMENT_STATUSES)[number];
 export const SEARCH_RESULT_KINDS = ["insight", "segment", "call"] as const;
 export type SearchResultKind = (typeof SEARCH_RESULT_KINDS)[number];
 
+export const DIMENSION_PIP_STATES = ["proven", "blocked", "weak", "missing"] as const;
+export type DimensionPipState = (typeof DIMENSION_PIP_STATES)[number];
+
+export const DEAL_DIMENSION_IDS = [
+  "pain_identified",
+  "business_impact_identified",
+  "decision_maker_identified",
+  "economic_buyer_identified",
+  "timeline_identified",
+  "next_meeting_committed",
+  "competitor_active",
+  "blocker_active",
+] as const;
+export type DealDimensionId = (typeof DEAL_DIMENSION_IDS)[number];
+
 export const RECOMMENDATION_KINDS = ["saved_search", "aggregate_insight"] as const;
 export type RecommendationKind = (typeof RECOMMENDATION_KINDS)[number];
 

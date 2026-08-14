@@ -305,6 +305,7 @@ html.dark .btn.play:hover{filter:brightness(1.4)}
   border-left:1px solid var(--line);box-shadow:var(--shadow-lift);transform:translateX(102%);
   transition:transform .32s cubic-bezier(.22,.9,.28,1);display:flex;flex-direction:column;visibility:hidden}
 .drawer.on{transform:none;visibility:visible}
+.drawer.lg{width:min(720px,94vw)}
 .drawer-b{flex:1 1 auto;overflow:auto;padding:18px}
 .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%) scale(.97);z-index:95;width:min(760px,94vw);
   background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lift);

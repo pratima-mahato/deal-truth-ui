@@ -11,12 +11,12 @@ export function UploadPage() {
   const navigate = useNavigate();
   const upload = useUploadFlow();
   const [tab, setTab] = useState("file");
-  const [title, setTitle] = useState("Acme Inc. · Enterprise discovery");
-  const [customerName, setCustomerName] = useState("Sarah Mitchell · Acme Inc.");
-  const [repName, setRepName] = useState("Rahul Mehta");
+  const [title, setTitle] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [repName, setRepName] = useState("");
   const [direction, setDirection] = useState<CallDirection>("outbound");
-  const [competitors, setCompetitors] = useState("AcmeAI, VoiceForge");
-  const [keywords, setKeywords] = useState("Salesforce, SOC 2, security");
+  const [competitors, setCompetitors] = useState("");
+  const [keywords, setKeywords] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -101,13 +101,13 @@ export function UploadPage() {
           <div className="eyebrow" style={{ marginBottom: 6 }}>
             Customer
           </div>
-          <input className="inp" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+          <input className="inp" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name" />
         </div>
         <div className="card pad-lg">
           <div className="eyebrow" style={{ marginBottom: 6 }}>
             Rep
           </div>
-          <input className="inp" value={repName} onChange={(e) => setRepName(e.target.value)} />
+          <input className="inp" value={repName} onChange={(e) => setRepName(e.target.value)} placeholder="Rep name" />
         </div>
         <div className="card pad-lg">
           <div className="split" style={{ gap: 12 }}>
@@ -115,13 +115,13 @@ export function UploadPage() {
               <div className="eyebrow" style={{ marginBottom: 6 }}>
                 Tracked competitors
               </div>
-              <input className="inp" value={competitors} onChange={(e) => setCompetitors(e.target.value)} />
+              <input className="inp" value={competitors} onChange={(e) => setCompetitors(e.target.value)} placeholder="Competitors to track" />
             </div>
             <div>
               <div className="eyebrow" style={{ marginBottom: 6 }}>
                 Tracked keywords
               </div>
-              <input className="inp" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+              <input className="inp" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="Keywords to track" />
             </div>
           </div>
         </div>

@@ -1,5 +1,22 @@
 import { X } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+type DrawerSize = "md" | "lg";
+
+const DEFAULT_DRAWER_SIZE: DrawerSize = "md";
+const UNSAVED_CLOSE_PROMPT = "You have unsaved changes. Close anyway?";
+
+type DrawerProps = {
+  open: boolean;
+  title: string;
+  eyebrow?: string;
+  children: ReactNode;
+  footer?: ReactNode;
+  onClose: () => void;
+  size?: DrawerSize;
+  dirty?: boolean;
+};
 
 export function Drawer({
   open,
@@ -8,29 +25,34 @@ export function Drawer({
   children,
   footer,
   onClose,
-}: {
-  open: boolean;
-  title: string;
-  eyebrow?: string;
-  children: ReactNode;
-  footer?: ReactNode;
-  onClose: () => void;
-}) {
+  size = DEFAULT_DRAWER_SIZE,
+  dirty = false,
+}: DrawerProps) {
+  const requestClose = useCallback(() => {
+    if (dirty && !window.confirm(UNSAVED_CLOSE_PROMPT)) return;
+    onClose();
+  }, [dirty, onClose]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, requestClose]);
 
   if (!open) return null;
 
   return (
     <>
-      <div className={open ? "scrim on" : "scrim"} onClick={onClose} />
-      <aside className={open ? "drawer on" : "drawer"} role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+      <div className="scrim on" onClick={requestClose} />
+      <aside
+        className={cn("drawer on", size === "lg" && "lg")}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="drawer-title"
+      >
         <div className="between pad" style={{ borderBottom: "1px solid var(--line)" }}>
           <div>
             {eyebrow ? <p className="chip brand">{eyebrow}</p> : null}
@@ -38,7 +60,7 @@ export function Drawer({
               {title}
             </h2>
           </div>
-          <button type="button" className="iconbtn" onClick={onClose} aria-label="Close">
+          <button type="button" className="iconbtn" onClick={requestClose} aria-label="Close">
             <X className="h-4 w-4" />
           </button>
         </div>

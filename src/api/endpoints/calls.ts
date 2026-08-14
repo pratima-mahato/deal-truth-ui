@@ -3,15 +3,28 @@ import { apiClient, apiUrl } from "../client";
 import { env } from "@/config/env";
 import {
   insightSchema,
+  isReportReadyStatus,
   type Call,
   type CallReport,
+  type CallRefusals,
+  type CallsOverview,
   type CreateCallRequest,
   type Insight,
   type ListCallsParams,
   type ProcessingEvent,
   type ProcessingSnapshot,
 } from "../contracts";
-import { mapCall, mapCallList, mapEventList, mapInsights, mapReport, toCreateCallBody } from "../adapters";
+import {
+  mapAudioUrl,
+  mapCall,
+  mapCallList,
+  mapCallsOverview,
+  mapEventList,
+  mapInsights,
+  mapRefusals,
+  mapReport,
+  toCreateCallBody,
+} from "../adapters";
 
 export async function listCalls(_params: ListCallsParams = {}): Promise<{ items: Call[]; total: number }> {
   const data = await apiClient.get<unknown>("/api/v1/calls");
@@ -75,6 +88,32 @@ export function callAudioUrl(callId: string): string {
   const url = new URL(apiUrl(`/api/v1/calls/${callId}/audio`), typeof window === "undefined" ? "http://localhost" : window.location.origin);
   if (env.skipNgrokWarning) url.searchParams.set("ngrok-skip-browser-warning", "true");
   return url.toString();
+}
+
+export async function getCallAudioUrl(callId: string): Promise<string> {
+  const signed = mapAudioUrl(await apiClient.get(`/api/v1/calls/${callId}/audio-url`));
+  return signed || callAudioUrl(callId);
+}
+
+export async function resolveCallAudioSrc(callId: string): Promise<string> {
+  try {
+    return await getCallAudioUrl(callId);
+  } catch {
+    return callAudioUrl(callId);
+  }
+}
+
+export async function getCallRefusals(callId: string): Promise<CallRefusals> {
+  return mapRefusals(await apiClient.get(`/api/v1/calls/${callId}/refusals`), callId);
+}
+
+export async function getCallsOverview(): Promise<CallsOverview> {
+  const overview = mapCallsOverview(await apiClient.get("/api/v1/calls/overview"));
+  const ready = overview.recentCalls.filter((call) => isReportReadyStatus(call.status));
+  if (!ready.length) return overview;
+  const rows = await Promise.all(ready.slice(0, 10).map((call) => getCallRefusals(call.id).catch(() => null)));
+  const refusedCount = rows.reduce((sum, row) => sum + (row?.refusedCount ?? 0), 0);
+  return { ...overview, refusedCount };
 }
 
 export async function downloadCallExport(callId: string, format: "json" | "markdown"): Promise<void> {

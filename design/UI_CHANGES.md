@@ -4,7 +4,7 @@
 
 Read `UI_DESIGN_SPEC.md` first — it holds the tokens and component specs this plan refers to.
 
-The good news: **the data layer is already right.** `src/api/adapters.ts` is 703 lines of defensive snake_case↔camelCase normalisation, the zod contracts in `src/api/contracts/` cover the whole report, `EvidenceFocusContext` + `AudioPlayerProvider` already implement the evidence→audio chain, and the Acme fixture is a genuinely well-written demo scenario. **Do not rewrite any of that.** Almost everything below is presentation-layer work.
+The good news: **the data layer is already right.** `src/api/adapters.ts` is 703 lines of defensive snake_case↔camelCase normalisation, the zod contracts in `src/api/contracts/` cover the whole report, `EvidenceFocusContext` + `AudioPlayerProvider` already implement the evidence→audio chain, and the Example Inc. fixture is a genuinely well-written demo scenario. **Do not rewrite any of that.** Almost everything below is presentation-layer work.
 
 Effort estimates assume one person with Cursor/Claude Code.
 
@@ -103,7 +103,7 @@ Delete `OutlineView` from the tab bar (fold its chapters into the waveform lane)
 
 ### 0.4 Fix the five known demo landmines (40 min)
 
-1. **`OverviewStory.tsx`** — `model.attention.slice(0, 2)` silently drops the sharpest finding on the Acme call ("no next meeting committed"). Remove the cap; the Verdict view has room.
+1. **`OverviewStory.tsx`** — `model.attention.slice(0, 2)` silently drops the sharpest finding on the Example call ("no next meeting committed"). Remove the cap; the Verdict view has room.
 2. **`MomentsAndCompetitors.tsx`** — `MomentsTimeline` normalises by `max(startMs)` instead of `durationMs`, so the last moment always pins to 100% and its label clips. Use `call.durationMs`, and stagger ticks onto two rows.
 3. **`AudioPlayerProvider.tsx`** — the `mapToFile` modulo trick maps a 12s mock clip onto 38 logical minutes. Keep it for mocks, but assert `env.useMocks` around it so it can never fire against real audio.
 4. **`DealSignalStrip.tsx`** — currently used *only* on `SharedPage`. It is the most scannable artefact in the data model. Promote it to the Verdict view and, as pips, to every dashboard row.

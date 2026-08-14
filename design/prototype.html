@@ -596,8 +596,8 @@ html.presenting .rail{max-height:calc(100vh - 240px)}
         <a class="navlink" href="#" onclick="go('workspace');return false" data-r="workspace">Calls</a>
         <a class="navlink" href="#" onclick="go('search');return false" data-r="search">Search</a>
         <a class="navlink" href="#" onclick="go('upload');return false" data-r="upload">Upload</a>
-        <a class="navlink" href="#" onclick="go('call');return false" data-r="call">Acme call</a>
-        <a class="navlink" href="#" onclick="go('deal');return false" data-r="deal">Acme deal</a>
+        <a class="navlink" href="#" onclick="go('call');return false" data-r="call">Example call</a>
+        <a class="navlink" href="#" onclick="go('deal');return false" data-r="deal">Example deal</a>
         <a class="navlink" href="#" onclick="go('integrations');return false" data-r="integrations">Integrations</a>
         <a class="navlink" href="#" onclick="go('shared');return false" data-r="shared">Shared view</a>
       </nav>
@@ -674,7 +674,7 @@ html.presenting .rail{max-height:calc(100vh - 240px)}
 <script>
 /* ============================================================
    DEMO DATASET — mirrors deal-truth-api /report + /transcript
-   Content is the Acme fixture from deal-truth-ui/src/mocks/fixtures
+   Content is the Example fixture from deal-truth-ui/src/mocks/fixtures
    ============================================================ */
 const DUR = 2292000; // 38:12
 
@@ -699,7 +699,7 @@ const SEG = [
  {n:25,ms:1318000,role:'seller',  text:"Fair. Let's come back to that against the six hours a week you just described."},
  {n:26,ms:1338000,role:'customer',text:"If you can support Salesforce, I think we're good to move forward on the product side.", audio:'s26', tags:[['BUYING SIGNAL','proof']]},
  {n:27,ms:1400000,role:'seller',  text:"That's great to hear. Anything else in flight I should know about?"},
- {n:28,ms:1443000,role:'customer',text:"We've also got a demo with AcmeAI next Tuesday.", audio:'s28', tags:[['COMPETITOR','blocker']]},
+ {n:28,ms:1443000,role:'customer',text:"We've also got a demo with NexusAI next Tuesday.", audio:'s28', tags:[['COMPETITOR','blocker']]},
  {n:29,ms:1470000,role:'seller',  text:"How are you looking at them?"},
  {n:30,ms:1487000,role:'customer',text:"They are cheaper. I am not sure they actually write back to Salesforce though.", audio:'s30', tags:[['COMPETITOR','unproven']]},
  {n:31,ms:1530000,role:'seller',  text:"Happy to put a side-by-side together on the Salesforce behaviour specifically."},
@@ -729,7 +729,7 @@ const SIGNALS = [
  {dim:'economic_buyer_identified',  label:'Economic buyer identified', state:'missing', v:'Not found',  ev:[], why:'No budget owner was named or present. Finance was referenced, never identified.'},
  {dim:'timeline_identified',        label:'Purchase timeline',         state:'missing', v:'Not found',  ev:[], why:'The customer never stated a date. The rep asserted "this month" — see Reality Check.'},
  {dim:'next_meeting_committed',     label:'Next meeting committed',    state:'blocked', v:'Refused',    ev:['sg46'], why:'The customer explicitly declined to commit: "Send me something and I\'ll get back to you."'},
- {dim:'competitor_active',          label:'Competitor active',         state:'blocked', v:'Active',     ev:['sg28','sg30'], why:'AcmeAI demo is already booked for next Tuesday.'},
+ {dim:'competitor_active',          label:'Competitor active',         state:'blocked', v:'Active',     ev:['sg28','sg30'], why:'NexusAI demo is already booked for next Tuesday.'},
  {dim:'blocker_active',             label:'Blocker active',            state:'blocked', v:'Security',   ev:['sg32'], why:'Security review is a hard gate before any purchase.'}
 ];
 
@@ -740,7 +740,7 @@ const TRUTH = [
  {cat:'buying_signal', title:'Product fit confirmed, conditional on Salesforce', sum:'Willing to move forward on product — commercial terms still open.', st:'SUPPORTED', ev:['sg26'], conf:.88},
  {cat:'budget',        title:'Proposed price is ~2× current spend', sum:'Paying about $400/mo today against $800/mo proposed.', st:'SUPPORTED', ev:['sg24'], conf:.9},
  {cat:'blocker',       title:'Security must approve before onboarding', sum:'A vendor security review is mandatory, not a formality.', st:'SUPPORTED', ev:['sg32'], conf:.95},
- {cat:'competition',   title:'AcmeAI demo booked for next Tuesday', sum:'Cheaper, but the customer doubts its Salesforce write-back.', st:'SUPPORTED', ev:['sg28','sg30'], conf:.87},
+ {cat:'competition',   title:'NexusAI demo booked for next Tuesday', sum:'Cheaper, but the customer doubts its Salesforce write-back.', st:'SUPPORTED', ev:['sg28','sg30'], conf:.87},
  {cat:'commitment',    title:'Will introduce the security lead', sum:'The only concrete thing the customer agreed to do.', st:'SUPPORTED', ev:['sg38'], conf:.86},
  {cat:'timeline',      title:'Purchase timeline', sum:'The customer never stated when they intend to buy.', st:'ABSENCE_BASED', ev:[], conf:1}
 ];
@@ -761,7 +761,7 @@ const COMMIT = {
  seller:[
   {action:'Send SOC 2 documentation', owner:'Rahul Mehta', due:'Friday',   status:'committed', ev:['sg36']},
   {action:'Share Salesforce integration docs', owner:'Rahul Mehta', due:'Tomorrow', status:'committed', ev:['sg40']},
-  {action:'Build AcmeAI side-by-side on Salesforce write-back', owner:'Rahul Mehta', due:'Before Tuesday', status:'committed', ev:['sg31']}
+  {action:'Build NexusAI side-by-side on Salesforce write-back', owner:'Rahul Mehta', due:'Before Tuesday', status:'committed', ev:['sg31']}
  ],
  customer:[
   {action:'Introduce the security lead', owner:'Sarah Mitchell', due:'Next week', status:'committed', ev:['sg38']},
@@ -774,7 +774,7 @@ const COMMIT = {
 const KILLERS = [
  {kind:'security_blocker', sev:'high', st:'SUPPORTED', title:'Security review is a hard gate',
   sum:'The customer cannot onboard any vendor until security signs off. No owner named.', ev:['sg32']},
- {kind:'active_competitor', sev:'high', st:'SUPPORTED', title:'AcmeAI is in the room on Tuesday',
+ {kind:'active_competitor', sev:'high', st:'SUPPORTED', title:'NexusAI is in the room on Tuesday',
   sum:'A cheaper competitor gets a live demo before your documents land.', ev:['sg28']},
  {kind:'no_next_meeting', sev:'high', st:'SUPPORTED', title:'The customer refused a next meeting',
   sum:'Asked to be sent material instead. No date exists anywhere in this call.', ev:['sg46']},
@@ -795,7 +795,7 @@ const OBJ = [
 ];
 
 /* ---------- competitors ---------- */
-const COMPET = [{name:'AcmeAI', position:'evaluating', likes:['Lower price'], concerns:['Unproven Salesforce write-back'], ev:['sg28','sg30']}];
+const COMPET = [{name:'NexusAI', position:'evaluating', likes:['Lower price'], concerns:['Unproven Salesforce write-back'], ev:['sg28','sg30']}];
 
 /* ---------- moments ---------- */
 const MOMENTS = [
@@ -803,7 +803,7 @@ const MOMENTS = [
  {kind:'pain',        label:'6 hrs/week quantified',        ms:522000,  seg:'sg14', icon:'✦'},
  {kind:'pricing',     label:'Price ~2× current',            ms:1274000, seg:'sg24', icon:'₹'},
  {kind:'buying_signal',label:'Intent, conditional',         ms:1338000, seg:'sg26', icon:'▲'},
- {kind:'competitor',  label:'AcmeAI demo Tuesday',          ms:1443000, seg:'sg28', icon:'⚔'},
+ {kind:'competitor',  label:'NexusAI demo Tuesday',          ms:1443000, seg:'sg28', icon:'⚔'},
  {kind:'security',    label:'Security review required',     ms:1564000, seg:'sg32', icon:'⬢'},
  {kind:'objection',   label:'Rep overstates intent',        ms:1902000, seg:'sg41', icon:'⚠'},
  {kind:'next_step',   label:'No meeting committed',         ms:2091000, seg:'sg46', icon:'✕'}
@@ -824,13 +824,13 @@ const SENT = [
 
 /* ---------- battlecard ---------- */
 const CARD = {
- goal:'Get the security owner into the room before AcmeAI demos on Tuesday.',
+ goal:'Get the security owner into the room before NexusAI demos on Tuesday.',
  ask:['Who owns the security approval, and can we get them on the next call?',
       'What is the full document list your review needs beyond SOC 2?',
       'Can the security review run in parallel with the commercial conversation?'],
  prep:[{t:'Pricing — ~2× incumbent', d:'They said $400 today vs $800 proposed. Reframe against 6 hrs/week of coordinator time and overnight leads before touching discount.', ev:['sg24']},
-       {t:'AcmeAI is cheaper', d:'Their own doubt is Salesforce write-back. Lead the side-by-side with that, not price.', ev:['sg30']}],
- send:['SOC 2 report (committed Friday)','Salesforce integration docs (committed tomorrow)','Data-flow diagram + sub-processor list','AcmeAI Salesforce write-back comparison'],
+       {t:'NexusAI is cheaper', d:'Their own doubt is Salesforce write-back. Lead the side-by-side with that, not price.', ev:['sg30']}],
+ send:['SOC 2 report (committed Friday)','Salesforce integration docs (committed tomorrow)','Data-flow diagram + sub-processor list','NexusAI Salesforce write-back comparison'],
  missing:['Economic buyer','Decision maker','Purchase timeline','Next meeting'],
  warning:'Do not open the next call assuming a purchase window. The customer never gave one.'
 };
@@ -842,10 +842,10 @@ const BRIEF = {
       'Product fit confirmed on the call, conditional on the Salesforce integration.'],
  whyNot:['Security review is a mandatory gate with no named owner.',
          'Proposed price is roughly double current spend and was left unresolved.',
-         'AcmeAI has a live demo booked before our documents land.'],
+         'NexusAI has a live demo booked before our documents land.'],
  risk:'No economic buyer has entered the deal, and the customer refused to book a next meeting.',
  commitment:'weak',
- next:'Get the security owner onto a call this week. Send the SOC 2 pack and the AcmeAI comparison before Tuesday.'
+ next:'Get the security owner onto a call this week. Send the SOC 2 pack and the NexusAI comparison before Tuesday.'
 };
 
 /* ---------- evidence-safe follow-up ---------- */
@@ -875,7 +875,7 @@ const REJECTED = [
 
 /* ---------- metrics ---------- */
 const METRICS = {talkSeller:48, talkCustomer:52, questions:11, monologue:'0:42 · Rahul Mehta',
-  keywords:[['Salesforce',6],['security',5],['pricing',3],['AcmeAI',1]]};
+  keywords:[['Salesforce',6],['security',5],['pricing',3],['NexusAI',1]]};
 
 /* ---------- ask-the-call canned answers ---------- */
 const ASK = {
@@ -884,14 +884,14 @@ const ASK = {
  'did they commit to a next meeting?':{a:'No. The customer explicitly declined to commit.',
    m:[{s:'sg46',r:'The customer asked to be sent material instead of booking a date.'},{s:'sg47',r:'The rep asserted a next week meeting; the customer never confirmed it.'}]},
  'what do we owe them?':{a:'Three seller commitments, all with evidence.',
-   m:[{s:'sg36',r:'SOC 2 documentation, due Friday.'},{s:'sg40',r:'Salesforce integration docs, due tomorrow.'},{s:'sg31',r:'AcmeAI side-by-side on Salesforce write-back.'}]},
- 'who is the competitor?':{a:'AcmeAI, with a demo booked for next Tuesday.',
+   m:[{s:'sg36',r:'SOC 2 documentation, due Friday.'},{s:'sg40',r:'Salesforce integration docs, due tomorrow.'},{s:'sg31',r:'NexusAI side-by-side on Salesforce write-back.'}]},
+ 'who is the competitor?':{a:'NexusAI, with a demo booked for next Tuesday.',
    m:[{s:'sg28',r:'The demo is already scheduled.'},{s:'sg30',r:'Cheaper, but the customer doubts its Salesforce write-back.'}]}
 };
 
 /* ---------- workspace call list ---------- */
 const CALLS = [
- {id:'acme', cust:'Acme Inc.', person:'Sarah Mitchell', title:'Enterprise discovery', rep:'Rahul Mehta',
+ {id:'demo', cust:'Example Inc.', person:'Sarah Mitchell', title:'Enterprise discovery', rep:'Rahul Mehta',
   dur:'38:12', when:'Today, 11:04', status:'SHIPPED', risk:'Security review · no next meeting',
   pips:['proven','proven','missing','missing','missing','blocked','blocked','blocked'], live:true},
  {id:'northstar', cust:'Northstar', person:'Priya Shah', title:'Renewal review', rep:'Rahul Mehta',
@@ -926,7 +926,7 @@ const DIMS=[
  ['blocker_active','Blocker active']
 ];
 const DEAL={
- account:'Acme Inc.', person:'Sarah Mitchell', rep:'Rahul Mehta',
+ account:'Example Inc.', person:'Sarah Mitchell', rep:'Rahul Mehta',
  calls:[
   {id:'c1', title:'Intro call', when:'28 Jul', dur:'22:14', states:{
     pain_identified:'proven', business_impact_identified:'missing', decision_maker_identified:'missing',
@@ -954,7 +954,7 @@ const DEAL={
 };
 
 /* ============================================================
-   CROSS-CALL SEGMENTS — so search returns real results beyond Acme
+   CROSS-CALL SEGMENTS — so search returns real results beyond Example
    ============================================================ */
 const XSEG=[
  {call:'Northstar',     who:'Priya Shah',  ms:742000,  text:"Honestly, the renewal number is higher than we budgeted for this year.", tag:['PRICING OBJECTION','unproven']},
@@ -970,13 +970,13 @@ const XSEG=[
 ];
 XSEG.forEach((s,i)=>{s.id='x'+i; s.role='customer'});
 
-/* flat search index: Acme segments (playable) + other calls + insight titles */
+/* flat search index: Example segments (playable) + other calls + insight titles */
 const SEARCH_INDEX=[
- ...SEG.filter(s=>s.role==='customer').map(s=>({kind:'segment',call:'Acme Inc.',text:s.text,who:s.who,ms:s.ms,seg:s.id,play:true})),
+ ...SEG.filter(s=>s.role==='customer').map(s=>({kind:'segment',call:'Example Inc.',text:s.text,who:s.who,ms:s.ms,seg:s.id,play:true})),
  ...XSEG.map(s=>({kind:'segment',call:s.call,text:s.text,who:s.who,ms:s.ms,seg:s.id,play:false,tag:s.tag})),
- ...TRUTH.map(t=>({kind:'insight',call:'Acme Inc.',type:CATLABEL[t.cat],text:t.title,sum:t.sum,seg:t.ev[0]||null,st:t.st})),
- ...OBJ.map(o=>({kind:'insight',call:'Acme Inc.',type:'Objection',text:o.title,sum:o.sum,seg:o.ev[0],st:'SUPPORTED'})),
- ...KILLERS.map(k=>({kind:'insight',call:'Acme Inc.',type:'Deal killer',text:k.title,sum:k.sum,seg:k.ev[0]||null,st:k.st})),
+ ...TRUTH.map(t=>({kind:'insight',call:'Example Inc.',type:CATLABEL[t.cat],text:t.title,sum:t.sum,seg:t.ev[0]||null,st:t.st})),
+ ...OBJ.map(o=>({kind:'insight',call:'Example Inc.',type:'Objection',text:o.title,sum:o.sum,seg:o.ev[0],st:'SUPPORTED'})),
+ ...KILLERS.map(k=>({kind:'insight',call:'Example Inc.',type:'Deal killer',text:k.title,sum:k.sum,seg:k.ev[0]||null,st:k.st})),
  ...[['Northstar','Objection','Renewal price above budget'],['Northstar','Deal killer','Procurement approval required'],
      ['Helix Labs','Deal killer','No next step agreed'],['Orbit Systems','Competitor','VoiceForge preferred on integrations'],
      ['Orbit Systems','Deal killer','Security review required'],['Lumen Group','Deal killer','Budget frozen until October']]
@@ -1211,7 +1211,7 @@ function viewWorkspace(){
       </div>
       <div class="hstack">
         <button class="btn" onclick="go('upload')">Upload a call</button>
-        <button class="btn primary" onclick="go('call')">Open the Acme call ${I.arrow}</button>
+        <button class="btn primary" onclick="go('call')">Open the Example call ${I.arrow}</button>
       </div>
     </div>
 
@@ -1287,11 +1287,11 @@ function viewUpload(){
       </div>
       <div class="split" style="gap:12px">
         <div><div class="eyebrow" style="margin-bottom:6px">Customer</div>
-          <div class="card flat pad" style="padding:9px 11px;font-size:13px">Sarah Mitchell · Acme Inc.</div></div>
+          <div class="card flat pad" style="padding:9px 11px;font-size:13px">Sarah Mitchell · Example Inc.</div></div>
         <div><div class="eyebrow" style="margin-bottom:6px">Rep</div>
           <div class="card flat pad" style="padding:9px 11px;font-size:13px">Rahul Mehta</div></div>
         <div><div class="eyebrow" style="margin-bottom:6px">Tracked competitors</div>
-          <div class="card flat pad" style="padding:9px 11px;font-size:13px">AcmeAI, VoiceForge</div></div>
+          <div class="card flat pad" style="padding:9px 11px;font-size:13px">NexusAI, VoiceForge</div></div>
         <div><div class="eyebrow" style="margin-bottom:6px">Tracked keywords</div>
           <div class="card flat pad" style="padding:9px 11px;font-size:13px">Salesforce, SOC 2, security</div></div>
       </div>
@@ -1325,7 +1325,7 @@ function viewProcessing(){
   return `<div class="page narrow">
     <div class="between" style="margin-bottom:16px">
       <div><div class="eyebrow" style="margin-bottom:5px">Processing</div>
-        <h1 class="serif" style="font-size:29px;letter-spacing:-.02em">Acme Inc. · Enterprise discovery</h1></div>
+        <h1 class="serif" style="font-size:29px;letter-spacing:-.02em">Example Inc. · Enterprise discovery</h1></div>
       <span class="chip brand" id="procStatus">TRANSCRIBING</span>
     </div>
     <div class="split" style="grid-template-columns:1fr;gap:14px">
@@ -1378,7 +1378,7 @@ function viewCall(){
         <div class="hstack" style="margin-bottom:5px;flex-wrap:wrap">
           <span class="chip proof">SHIPPED</span><span class="tiny mono">38:12 · today 11:04 · 2 speakers · en</span>
         </div>
-        <h1 class="serif" style="font-size:31px;letter-spacing:-.02em;line-height:1.1">Acme Inc. — enterprise discovery</h1>
+        <h1 class="serif" style="font-size:31px;letter-spacing:-.02em;line-height:1.1">Example Inc. — enterprise discovery</h1>
         <div class="sub" style="margin-top:3px">Sarah Mitchell (customer) · Rahul Mehta (rep) ·
           <button style="color:var(--brand);font-weight:700" onclick="go('deal')">3rd call in this deal — see how it moved ${I.arrow}</button></div>
       </div>
@@ -1715,7 +1715,7 @@ function vBrief(){
     <div class="card pad-lg reveal">
       <div class="between" style="margin-bottom:14px">
         <div><div class="eyebrow" style="margin-bottom:5px">Manager brief · 30 seconds</div>
-          <div class="serif" style="font-size:26px;letter-spacing:-.015em">Acme Inc.</div></div>
+          <div class="serif" style="font-size:26px;letter-spacing:-.015em">Example Inc.</div></div>
         <div class="hstack"><button class="btn sm" onclick="toast('Brief copied as plain text.')">Copy</button>
           <button class="btn sm" onclick="toast('Exported report.md — every claim keeps its timestamp.')">Export .md</button></div>
       </div>
@@ -1759,7 +1759,7 @@ function viewShared(){
       <div class="tiranga" style="height:3px;border-radius:9px;overflow:hidden;margin-bottom:16px"><i></i><i></i><i></i></div>
       <div class="between" style="flex-wrap:wrap;gap:10px">
         <div><div class="eyebrow" style="margin-bottom:6px">Shared call report · read only</div>
-          <div class="serif" style="font-size:30px;letter-spacing:-.02em">Acme Inc. — enterprise discovery</div>
+          <div class="serif" style="font-size:30px;letter-spacing:-.02em">Example Inc. — enterprise discovery</div>
           <div class="sub" style="margin-top:4px">38:12 · Sarah Mitchell &amp; Rahul Mehta · shipped today</div></div>
         ${ringHTML()}
       </div>
@@ -1786,7 +1786,7 @@ function viewSearch(){
   return `<div class="page mid">
     <div class="eyebrow" style="margin-bottom:6px">Search every call</div>
     <h1 class="serif" style="font-size:32px;letter-spacing:-.02em;margin-bottom:4px">Find the moment, not the document.</h1>
-    <p class="sub" style="margin-bottom:16px">Every result is a segment someone actually said. Acme results play the audio.</p>
+    <p class="sub" style="margin-bottom:16px">Every result is a segment someone actually said. Example results play the audio.</p>
     <input class="inp big" id="sq" placeholder="Try: security, no next step, pricing, competitor…"
       value="${esc(state.searchQ||'')}" oninput="runSearch(this.value)"/>
     <div class="hstack" style="flex-wrap:wrap;margin:12px 0 18px">
@@ -1824,7 +1824,7 @@ function runSearch(q){
       <div class="card pad-lg" style="margin-bottom:14px">
         <div class="between" style="margin-bottom:10px">
           <span class="eyebrow">${esc(call)} · ${rows.length} moment${rows.length>1?'s':''}</span>
-          ${call==='Acme Inc.'?'<span class="chip proof">audio available</span>':'<span class="chip">transcript only</span>'}</div>
+          ${call==='Example Inc.'?'<span class="chip proof">audio available</span>':'<span class="chip">transcript only</span>'}</div>
         <div class="vstack" style="gap:9px">${rows.map(r=>`
           <div class="receipt${r.play?'':' absent'}">
             <div class="receipt-head">${r.play?stampHTML('SUPPORTED'):'<span class="chip">'+esc(call)+'</span>'}
@@ -1933,7 +1933,7 @@ function askFromRail(v){
     (/(hesitant|worried|concern|why not|blocker)/.test(q)&&keys[0]) ||
     (/(meeting|next step|commit|date|follow)/.test(q)&&keys[1]) ||
     (/(owe|send|deliver|promise|action)/.test(q)&&keys[2]) ||
-    (/(competitor|acme ?ai|rival|vs)/.test(q)&&keys[3]);
+    (/(competitor|nexus ?ai|rival|vs)/.test(q)&&keys[3]);
   if(pick){ openAsk(); renderAsk(pick); }
   else { openAsk(); $('#askBody').insertAdjacentHTML('afterbegin',
     `<div class="receipt absent" style="margin-bottom:12px"><div class="receipt-head">${stampHTML('ABSENCE_BASED')}</div>
@@ -1958,10 +1958,10 @@ const CRM={
   ['Follow-up created','A seller commitment became a task.'],
   ['Dimension lost','A dimension that was proven on the previous call disappeared.']]},
  fields:[
-  {f:'Deal name',        v:'Acme Inc. — enterprise discovery', st:'SUPPORTED', src:'Call title + diarised customer'},
+  {f:'Deal name',        v:'Example Inc. — enterprise discovery', st:'SUPPORTED', src:'Call title + diarised customer'},
   {f:'Primary contact',  v:'Sarah Mitchell',                   st:'SUPPORTED', src:'Speaker role resolution · 0.90'},
   {f:'Call note · why they buy', v:'Manual routing costs about 6 hours a week across two coordinators.', st:'SUPPORTED', ev:'sg14'},
-  {f:'Call note · blockers',     v:'Security review is mandatory before onboarding. AcmeAI demo booked for Tuesday.', st:'SUPPORTED', ev:'sg32'},
+  {f:'Call note · blockers',     v:'Security review is mandatory before onboarding. NexusAI demo booked for Tuesday.', st:'SUPPORTED', ev:'sg32'},
   {f:'Follow-up task 1', v:'Send SOC 2 documentation — due Friday',            st:'SUPPORTED', ev:'sg36'},
   {f:'Follow-up task 2', v:'Share Salesforce integration docs — due tomorrow', st:'SUPPORTED', ev:'sg40'},
   {f:'Logged call',      v:'38:12 · 13 Aug 2026 · 2 participants',            st:'SUPPORTED', src:'Recording metadata'},
@@ -2180,11 +2180,11 @@ const CMDS=[
  ['Search every call','search',()=>go('search'),'G S'],
  ['Upload a call','upload',()=>go('upload'),''],
  ['Processing — watch the gate','processing',()=>go('processing'),''],
- ['Verdict — the Acme call','call',()=>{go('call')},'G C'],
+ ['Verdict — the Example call','call',()=>{go('call')},'G C'],
  ['The record — moments, sentiment, objections','record',()=>{go('call');setTimeout(()=>setView('moments'),120)},''],
  ['What to do — battlecard, commitments, email','act',()=>{go('call');setTimeout(()=>setView('act'),120)},''],
  ['Manager brief','brief',()=>{go('call');setTimeout(()=>setView('brief'),120)},''],
- ['Deal timeline — how Acme moved','deal',()=>go('deal'),'G D'],
+ ['Deal timeline — how Example moved','deal',()=>go('deal'),'G D'],
  ['Integrations — HubSpot &amp; Slack','integrations',()=>go('integrations'),''],
  ['Send to HubSpot — evidence-gated','crm',()=>{go('call');setTimeout(openCRM,300)},''],
  ['Shared report — what the customer sees','shared',()=>go('shared'),''],

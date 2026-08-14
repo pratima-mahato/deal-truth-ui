@@ -17,10 +17,20 @@ function integrationUrl(path: string): string {
   return `${env.integrationApiBaseUrl}${normalized}`;
 }
 
+function applyIntegrationAuth(headers: Headers): void {
+  const token = env.integrationApiToken.trim();
+  if (!token) return;
+  headers.set("Authorization", `Bearer ${token}`);
+}
+
 async function integrationRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const timeout = withTimeout();
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
+  applyIntegrationAuth(headers);
+  if (env.skipNgrokWarning) {
+    headers.set("ngrok-skip-browser-warning", "true");
+  }
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }

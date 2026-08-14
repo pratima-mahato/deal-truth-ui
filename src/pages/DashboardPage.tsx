@@ -5,8 +5,8 @@ import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { StatusPill } from "@/components/ui/Badge";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { ProofPips, callPips } from "@/features/calls/DealSignalStrip";
-import { GATE_CLAIMS_REFUSED, GATE_CLAIMS_SHIPPED } from "@/lib/evidence";
-import { useCalls, useRecommendations, useSampleCall, useUploadFlow } from "@/hooks/useCallApi";
+import { insightCountTotal } from "@/api/adapters";
+import { useCalls, useCallsOverview, useRecommendations, useSampleCall, useUploadFlow } from "@/hooks/useCallApi";
 import { formatDate, formatDuration } from "@/lib/utils";
 import { env } from "@/config/env";
 import { isReportReadyStatus } from "@/api/contracts";
@@ -15,6 +15,7 @@ import { ArrowGlyph } from "@/components/brand/ChakraMark";
 export function DashboardPage() {
   const calls = useCalls();
   const recs = useRecommendations();
+  const overview = useCallsOverview();
   const sample = useSampleCall();
   const upload = useUploadFlow();
   const navigate = useNavigate();
@@ -32,6 +33,15 @@ export function DashboardPage() {
   }
 
   const items = calls.data?.items ?? [];
+  const featured = items.find((call) => isReportReadyStatus(call.status)) ?? items[0];
+  const featuredHref = featured
+    ? isReportReadyStatus(featured.status)
+      ? `/calls/${featured.id}/verdict`
+      : `/calls/${featured.id}/processing`
+    : "/upload";
+  const featuredDealHref = featured?.dealId ? `/deals/${featured.dealId}` : env.useMocks ? "/deals/demo" : "/";
+  const shippedClaims = overview.data ? insightCountTotal(overview.data.insightCounts) : 0;
+  const recItems = recs.data?.items ?? [];
 
   function analyze() {
     if (!file) return;
@@ -67,9 +77,9 @@ export function DashboardPage() {
           <Link to="/upload" className="btn">
             Upload a call
           </Link>
-          {items[0] ? (
-            <Link to={`/calls/${env.demoCallId}/verdict`} className="btn primary">
-              Open the Acme call <ArrowGlyph />
+          {featured ? (
+            <Link to={featuredHref} className="btn primary">
+              Open latest call <ArrowGlyph />
             </Link>
           ) : null}
         </div>
@@ -77,9 +87,9 @@ export function DashboardPage() {
 
       <div className="split3" style={{ marginBottom: 18 }}>
         {[
-          { n: "①", t: "Every insight has proof", d: "Click any claim and hear the customer say it. Nothing ships without a segment behind it.", c: "proof", to: `/calls/${env.demoCallId}/verdict` },
-          { n: "②", t: "Every risk has a reason", d: "No health score. Eight dimensions, each either stated, blocked, or never mentioned.", c: "blocker", to: "/deals/acme" },
-          { n: "③", t: "Every call ends with an action", d: "A battlecard and a follow-up email built only from what was actually agreed.", c: "brand", to: `/calls/${env.demoCallId}/act` },
+          { n: "①", t: "Every insight has proof", d: "Click any claim and hear the customer say it. Nothing ships without a segment behind it.", c: "proof", to: featuredHref },
+          { n: "②", t: "Every risk has a reason", d: "No health score. Eight dimensions, each either stated, blocked, or never mentioned.", c: "blocker", to: featuredDealHref },
+          { n: "③", t: "Every call ends with an action", d: "A battlecard and a follow-up email built only from what was actually agreed.", c: "brand", to: featured ? `/calls/${featured.id}/act` : "/upload" },
         ].map((card) => (
           <Link key={card.t} to={card.to} className="card lift pad reveal" style={{ textAlign: "left" }}>
             <div className="hstack" style={{ marginBottom: 7 }}>
@@ -174,12 +184,17 @@ export function DashboardPage() {
           <div className="eyebrow" style={{ marginBottom: 8 }}>
             Across your calls this week
           </div>
-          {(recs.data?.items ?? []).slice(0, 4).map((item) => (
+          {(recItems.length ? recItems : []).slice(0, 4).map((item) => (
             <Link key={item.id} to={`/search?q=${encodeURIComponent(item.query)}`} className="between" style={{ padding: "8px 0" }}>
               <span style={{ fontSize: 13 }}>{item.description || item.title}</span>
               <ArrowGlyph />
             </Link>
           ))}
+          {!recs.isLoading && recItems.length === 0 ? (
+            <div className="sub" style={{ fontSize: 12.5 }}>
+              No cross-call patterns yet. They appear after shipped reports have objections, risks, or competitors.
+            </div>
+          ) : null}
         </div>
         <div className="card pad">
           <div className="eyebrow" style={{ marginBottom: 8 }}>
@@ -188,14 +203,14 @@ export function DashboardPage() {
           <div className="split">
             <div>
               <div className="big-num" style={{ fontSize: 48, color: "var(--proof)" }}>
-                {GATE_CLAIMS_SHIPPED}
+                {shippedClaims}
               </div>
               <div className="tiny">claims shipped with proof</div>
               <span className="chip proof" style={{ marginTop: 8 }}>PROVEN</span>
             </div>
             <div>
               <div className="big-num" style={{ fontSize: 48, color: "var(--blocker)" }}>
-                {GATE_CLAIMS_REFUSED}
+                {overview.data?.refusedCount ?? 0}
               </div>
               <div className="tiny">claims refused</div>
               <span className="chip blocker" style={{ marginTop: 8 }}>NOT FOUND</span>

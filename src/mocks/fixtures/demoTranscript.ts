@@ -1,9 +1,9 @@
 import type { Speaker, Transcript, TranscriptSegment } from "@/api/contracts";
 import { segmentId } from "@/lib/segmentId";
 
-export const ACME_CALL_ID = "call-acme-saas-labs";
+export const DEMO_CALL_ID = "call-demo";
 
-export const acmeSpeakers: Speaker[] = [
+export const demoSpeakers: Speaker[] = [
   {
     id: "spk-seller",
     providerSpeakerId: "speaker_0",
@@ -198,7 +198,7 @@ const rows: Row[] = [
     speaker: "spk-customer",
     start: [24, 3],
     end: [24, 22],
-    text: "We've also got a demo with AcmeAI next Tuesday.",
+    text: "We've also got a demo with NexusAI next Tuesday.",
   },
   {
     speaker: "spk-seller",
@@ -346,7 +346,7 @@ const rows: Row[] = [
   },
 ];
 
-export const ACME_SEGMENTS = {
+export const DEMO_SEGMENTS = {
   pain: segmentId(14),
   salesforceRequirement: segmentId(10),
   pricing: segmentId(24),
@@ -365,7 +365,7 @@ export const ACME_SEGMENTS = {
   finance: segmentId(48),
 } as const;
 
-export function buildAcmeTranscript(callId = ACME_CALL_ID): Transcript {
+export function buildDemoTranscript(callId = DEMO_CALL_ID): Transcript {
   const segments: TranscriptSegment[] = rows.map((row, index) => ({
     id: segmentId(index + 1),
     speakerId: row.speaker,
@@ -379,7 +379,7 @@ export function buildAcmeTranscript(callId = ACME_CALL_ID): Transcript {
     callId,
     language: "en",
     text: segments.map((s) => s.text).join(" "),
-    speakers: acmeSpeakers,
+    speakers: demoSpeakers,
     segments,
   };
 }

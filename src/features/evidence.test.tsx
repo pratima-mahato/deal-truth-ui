@@ -9,7 +9,7 @@ import { CustomerTruthSection } from "@/features/customer-truth/CustomerTruthSec
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { parseApiError, wrapFetchFailure } from "@/api/errors";
 import { formatClock } from "@/lib/utils";
-import { buildAcmeReport } from "@/mocks/fixtures/acmeReport";
+import { buildDemoReport } from "@/mocks/fixtures/demoReport";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 
@@ -100,8 +100,8 @@ describe("evidence flow", () => {
 describe("follow-up", () => {
   it("shows unsupported claims and allows remove", async () => {
     const user = userEvent.setup();
-    const report = buildAcmeReport();
-    render(wrap(<FollowUpPanel callId="call-acme-saas-labs" initial={report.followUp} />));
+    const report = buildDemoReport();
+    render(wrap(<FollowUpPanel callId="call-demo" initial={report.followUp} />));
     expect(screen.getByText(/looking forward to reconnecting next week/i)).toBeInTheDocument();
     expect(screen.getAllByText(/unsupported/i).length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: /remove this sentence/i }));
@@ -111,7 +111,7 @@ describe("follow-up", () => {
 
 describe("reality check", () => {
   it("renders seller and customer sides", () => {
-    const report = buildAcmeReport();
+    const report = buildDemoReport();
     render(wrap(<RealityCheckSection checks={report.realityChecks} />));
     expect(screen.getAllByText(/the rep — implied/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/the customer — said/i).length).toBeGreaterThan(0);
@@ -121,7 +121,7 @@ describe("reality check", () => {
 
 describe("customer truth", () => {
   it("shows unconfirmed timeline without a fake quote", () => {
-    const report = buildAcmeReport();
+    const report = buildDemoReport();
     render(wrap(<CustomerTruthSection facts={report.customerTruth} />));
     expect(screen.getAllByText(/no evidence found/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/84%/)).not.toBeInTheDocument();
@@ -131,7 +131,7 @@ describe("customer truth", () => {
 describe("deriveDimensions", () => {
   it("maps eight observed states without collapsing intent into pain", async () => {
     const { deriveDimensions } = await import("@/lib/evidence");
-    const tiles = deriveDimensions(buildAcmeReport());
+    const tiles = deriveDimensions(buildDemoReport());
     expect(tiles).toHaveLength(8);
     expect(tiles.find((t) => t.id === "pain_identified")?.state).toBe("proven");
     expect(tiles.find((t) => t.id === "decision_maker_identified")?.state).toBe("missing");

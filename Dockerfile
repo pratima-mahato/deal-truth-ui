@@ -15,7 +15,7 @@ COPY . .
 # Vite inlines VITE_* at build time. Pin these so Render dashboard env vars
 # cannot leak into the public bundle. API origin/key are injected at runtime
 # via config.js and nginx API_UPSTREAM / API_KEY.
-ARG VITE_DEMO_CALL_ID=call-acme-saas-labs
+ARG VITE_DEMO_CALL_ID=call-demo
 ENV VITE_API_BASE_URL= \
     VITE_USE_MOCKS=false \
     VITE_API_KEY= \

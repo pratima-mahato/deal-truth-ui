@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const CALL = "call-acme-saas-labs";
+const CALL = "call-demo";
 const VIEWS = ["verdict", "record", "act", "brief"];
 
 for (const view of VIEWS) {

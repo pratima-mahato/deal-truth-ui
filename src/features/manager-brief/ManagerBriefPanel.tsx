@@ -1,6 +1,6 @@
 import type { ManagerBrief } from "@/api/contracts";
 import type { DimensionTile } from "@/lib/evidence";
-import { GATE_CLAIMS_REFUSED, GATE_CLAIMS_SHIPPED, splitProse } from "@/lib/evidence";
+import { splitProse } from "@/lib/evidence";
 import { downloadCallExport } from "@/api/endpoints/calls";
 import { useState } from "react";
 
@@ -8,10 +8,14 @@ export function ManagerBriefPanel({
   brief,
   tiles,
   callId,
+  shippedCount,
+  refusedCount,
 }: {
   brief: ManagerBrief;
   tiles?: DimensionTile[];
   callId?: string;
+  shippedCount?: number;
+  refusedCount?: number;
 }) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -131,8 +135,8 @@ export function ManagerBriefPanel({
             No {tile.label.replace(/ identified$/i, "").toLowerCase()}
           </span>
         ))}
-        <span className="chip proof">{GATE_CLAIMS_SHIPPED} claims with proof</span>
-        <span className="chip blocker">{GATE_CLAIMS_REFUSED} claims refused</span>
+        {shippedCount != null ? <span className="chip proof">{shippedCount} claims with proof</span> : null}
+        {refusedCount != null ? <span className="chip blocker">{refusedCount} claims refused</span> : null}
       </div>
       {brief.intent || brief.competition ? (
         <div className="sub" style={{ fontSize: 12.5, marginTop: 12 }}>

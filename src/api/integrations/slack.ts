@@ -1,5 +1,6 @@
 import { env } from "@/config/env";
 import type { SlackAlert } from "./contracts";
+import { configureSlackWebhook } from "@/api/endpoints/platform";
 
 const WEBHOOK_PATTERN = /^https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9/_-]+$/;
 
@@ -12,16 +13,16 @@ export function validateSlackWebhook(url: string): string | null {
 }
 
 /**
- * Future backend hook. The current integration API has no webhook-save endpoint.
- * The URL is never logged, stored in web storage, or sent to POST /v1/sync.
+ * Stores the webhook on the Deal Truth API. The URL is never logged or returned.
  */
-export async function saveSlackWebhook(url: string): Promise<{ status: "unsupported" } | { status: "demo" }> {
+export async function saveSlackWebhook(url: string): Promise<{ status: "ok" } | { status: "demo" }> {
   const error = validateSlackWebhook(url);
   if (error) throw new Error(error);
-  if (!env.useMockIntegrations) {
-    return { status: "unsupported" };
+  if (env.useMockIntegrations) {
+    return { status: "demo" };
   }
-  return { status: "demo" };
+  await configureSlackWebhook(url);
+  return { status: "ok" };
 }
 
 export function sanitizeSlackAlert(alert: SlackAlert): SlackAlert {

@@ -72,14 +72,14 @@ const EXACT = new Set([
 // Decorative counts get ±25% — chip and card counts shift with copy edits.
 const TOLERANCE = 0.25;
 
-const CALL = 'call-acme-saas-labs';
+const CALL = 'call-demo';
 const ROUTES: Record<string, string> = {
   workspace: '/', search: '/search', upload: '/upload',
   'call:verdict': `/calls/${CALL}/verdict`,
   'call:moments': `/calls/${CALL}/record`,
   'call:act': `/calls/${CALL}/act`,
   'call:brief': `/calls/${CALL}/brief`,
-  deal: '/deals/acme', integrations: '/integrations',
+  deal: '/deals/demo', integrations: '/integrations',
 };
 
 for (const [screen, expected] of Object.entries(manifest.screens)) {

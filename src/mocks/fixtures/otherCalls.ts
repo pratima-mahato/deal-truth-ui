@@ -1,5 +1,5 @@
 import type { Call, CallReport, Speaker, Transcript, TranscriptSegment } from "@/api/contracts";
-import { acmeCall, buildAcmeReport } from "./acmeReport";
+import { demoCall, buildDemoReport } from "./demoReport";
 import { segmentId } from "@/lib/segmentId";
 
 function speakers(seller: string, customer: string): Speaker[] {
@@ -139,7 +139,7 @@ export const zenithCall: Call = {
 };
 
 export const seedCalls: Call[] = [
-  acmeCall,
+  demoCall,
   northstarCall,
   helixCall,
   orbitCall,
@@ -206,10 +206,10 @@ function cloneReport(base: CallReport, call: Call, overrides: Partial<CallReport
   };
 }
 
-const acmeTemplate = buildAcmeReport();
+const demoTemplate = buildDemoReport();
 
 export function northstarReport(): CallReport {
-  return cloneReport(acmeTemplate, northstarCall, {
+  return cloneReport(demoTemplate, northstarCall, {
     dealSignals: [
       { id: "pain", label: "Pain identified", state: "positive" },
       { id: "blocker", label: "Pricing objection", state: "warning" },
@@ -266,7 +266,7 @@ export function northstarReport(): CallReport {
 }
 
 export function helixReport(): CallReport {
-  return cloneReport(acmeTemplate, helixCall, {
+  return cloneReport(demoTemplate, helixCall, {
     dealSignals: [
       { id: "pain", label: "Pain identified", state: "positive" },
       { id: "next_meeting", label: "Next meeting committed", state: "missing" },
@@ -310,7 +310,7 @@ export function helixReport(): CallReport {
 }
 
 export function orbitReport(): CallReport {
-  return cloneReport(acmeTemplate, orbitCall, {
+  return cloneReport(demoTemplate, orbitCall, {
     dealSignals: [
       { id: "competitor", label: "Competition active", state: "negative" },
       { id: "blocker", label: "Security blocker", state: "negative" },
@@ -374,7 +374,7 @@ export function orbitReport(): CallReport {
 }
 
 export function lumenReport(): CallReport {
-  const report = cloneReport(acmeTemplate, lumenCall, {
+  const report = cloneReport(demoTemplate, lumenCall, {
     dealSignals: [
       { id: "intent", label: "Buying intent", state: "warning" },
       { id: "blocker", label: "Budget blocker", state: "negative" },

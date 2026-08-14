@@ -13,7 +13,7 @@ function matchesQuery(text: string, query: string): boolean {
     pricing: ["price", "commercial", "budget"],
     objections: ["objection", "concern", "risk"],
     integrations: ["salesforce", "crm", "integration"],
-    competitor: ["acmeai", "competition"],
+    competitor: ["nexusai", "competition"],
     intent: ["buying", "move forward"],
   };
   return q
