@@ -203,10 +203,10 @@
    ]
   },
   "integrations": {
-   "counts": {
-    "cards": 4,
-    "chips": 9
-   },
+    "counts": {
+      "cards": 3,
+      "chips": 4
+    },
    "headings": [
     "INTEGRATIONS",
     "Nothing reaches your CRM without a receipt.",

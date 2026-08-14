@@ -495,7 +495,7 @@ function ActView({
           <div style={{ border: "1px solid var(--proof-line)", background: "var(--proof-soft)", borderRadius: 12, padding: "12px 14px" }}>
             <div className="between" style={{ marginBottom: 5 }}>
               <span style={{ fontWeight: 800, fontSize: 13.5 }}>HubSpot</span>
-              <span className="chip proof">✓ Connected</span>
+              <span className="chip proof">Connected</span>
             </div>
             <div className="sub" style={{ fontSize: 12.5, marginBottom: 10 }}>
               {proposed.crmActions.filter((action) => action.state === "SUPPORTED").length} fields carry evidence ·{" "}
@@ -511,13 +511,14 @@ function ActView({
           <div style={{ border: "1px solid var(--proof-line)", background: "var(--proof-soft)", borderRadius: 12, padding: "12px 14px" }}>
             <div className="between" style={{ marginBottom: 5 }}>
               <span style={{ fontWeight: 800, fontSize: 13.5 }}>Slack</span>
-              <span className="chip proof">✓ Connected</span>
+              <span className="chip proof">Connected</span>
             </div>
             <div className="sub" style={{ fontSize: 12.5, marginBottom: 10 }}>
-              {proposed.slack.value}. Alert the team when a deal risk, a refused claim, or a lost dimension appears.
+              {proposed.slack.value}. Alerts fire from the integration service when a deal risk, refused claim, or lost
+              dimension appears.
             </div>
             <Link to="/integrations" className="btn sm">
-              Manage alerts
+              View connection
             </Link>
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
   HUBSPOT_TASK_TYPE,
   MS_PER_DAY,
   SLACK_ALERT_TYPE,
+  SLACK_CHANGES_MAX,
   SLACK_EVIDENCE_MAX,
   SLACK_RISKS_MAX,
   SLACK_SEVERITY,
@@ -344,6 +345,11 @@ export function proposeIntegrations(
   const slackTitle = truncateTitle(
     hasDealRisk ? `${accountName}: ${report.managerBrief.biggestRisk}` : `${accountName}: call processed`,
   );
+  const changes = report.realityChecks.slice(0, SLACK_CHANGES_MAX).map((check) => ({
+    label: check.title.trim() || "Reality check",
+    before: check.sellerClaim,
+    after: check.customerReality,
+  }));
   const slack: SlackAlert = {
     enabled: true,
     type: hasDealRisk ? SLACK_ALERT_TYPE.DEAL_RISK : SLACK_ALERT_TYPE.CALL_PROCESSED,
@@ -354,6 +360,7 @@ export function proposeIntegrations(
       dealName,
     },
     message: report.summary.headline,
+    changes: changes.length ? changes : undefined,
     risks: risks.map((risk) => ({ label: risk.title, description: risk.summary })),
     evidence: evidence.length ? evidence : undefined,
     reportUrl: isHttpUrl(options.reportUrl) ? options.reportUrl : undefined,

@@ -179,10 +179,21 @@ export const hubspotSyncResponseSchema = z.object({
 
 export type HubspotSyncResponse = z.infer<typeof hubspotSyncResponseSchema>;
 
-export const hubspotHealthSchema = z.object({
-  status: z.string(),
-  operations: z.array(z.string()).optional(),
-});
+const connectionHintSchema = z
+  .object({
+    connected: z.boolean().optional(),
+    status: z.string().optional(),
+  })
+  .passthrough();
+
+export const hubspotHealthSchema = z
+  .object({
+    status: z.string().min(1),
+    operations: z.array(z.string()).optional(),
+    hubspot: connectionHintSchema.optional(),
+    slack: connectionHintSchema.optional(),
+  })
+  .passthrough();
 
 export type HubspotHealth = z.infer<typeof hubspotHealthSchema>;
 

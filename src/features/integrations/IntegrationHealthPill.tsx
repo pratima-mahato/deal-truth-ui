@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/Button";
 import { useIntegrationHealth } from "@/hooks/useIntegrations";
+import { isIntegrationServiceHealthy } from "@/api/hubspot";
 import { cn } from "@/lib/utils";
 
 export function IntegrationHealthPill() {
   const health = useIntegrationHealth();
-  const ok = health.isSuccess && Boolean(health.data?.status);
+  const ok = health.isSuccess && isIntegrationServiceHealthy(health.data?.status ?? "");
   const label = health.isLoading
     ? "Checking integration service…"
     : ok

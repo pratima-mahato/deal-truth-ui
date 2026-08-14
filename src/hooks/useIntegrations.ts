@@ -1,13 +1,17 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { getHubspotHealth } from "@/api/hubspot";
 import { integrationApi, newIntegrationId, sanitizeSlackAlert } from "@/api/integrations";
 import type { HubSpotOperation, HubSpotRequest, MockIntegrationScenario, SlackAlert } from "@/api/integrations/contracts";
 
+export const INTEGRATION_HEALTH_QUERY_KEY = ["integrations", "health"] as const;
+const HEALTH_REFETCH_MS = 30_000;
+
 export function useIntegrationHealth() {
   return useQuery({
-    queryKey: ["integrations", "health"],
-    queryFn: () => integrationApi.health(),
+    queryKey: INTEGRATION_HEALTH_QUERY_KEY,
+    queryFn: getHubspotHealth,
     retry: false,
-    refetchInterval: 30_000,
+    refetchInterval: HEALTH_REFETCH_MS,
   });
 }
 
