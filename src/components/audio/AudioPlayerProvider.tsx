@@ -1,6 +1,8 @@
 import { env } from "@/config/env";
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 
+export type PlaybackRange = { startMs: number; endMs: number };
+
 type AudioApi = {
   playRange: (startMs: number, endMs: number) => Promise<void>;
   playFrom: (logicalMs: number) => Promise<void>;
@@ -15,6 +17,7 @@ type AudioApi = {
   durationMs: number;
   playbackRate: number;
   volume: number;
+  activeRange: PlaybackRange | null;
   audioRef: RefObject<HTMLAudioElement | null>;
 };
 
@@ -37,14 +40,8 @@ export function AudioPlayerProvider({
   const [fileDurationMs, setFileDurationMs] = useState(0);
   const [playbackRate, setPlaybackRateState] = useState(1);
   const [volume, setVolumeState] = useState(1);
-  const durationMs = callDurationMs && callDurationMs > 0 ? callDurationMs : 0;
-  const resolvedDuration = Math.max(durationMs, fileDurationMs);
-
-  const captureFileDuration = useCallback((audio: HTMLAudioElement) => {
-    const seconds = audio.duration;
-    if (!Number.isFinite(seconds) || seconds <= 0) return;
-    setFileDurationMs(seconds * 1000);
-  }, []);
+  const [activeRange, setActiveRange] = useState<PlaybackRange | null>(null);
+  const durationMs = callDurationMs && callDurationMs > 0 ? callDurationMs : fileDurationMs;
 
   const mapToFile = useCallback((startMs: number, endMs: number) => {
     if (!env.useMocks) {
@@ -64,17 +61,24 @@ export function AudioPlayerProvider({
     async (startMs: number, endMs: number) => {
       const audio = audioRef.current;
       if (!audio) return;
-      if (audio.readyState < 1) {
-        await new Promise<void>((resolve) => {
-          audio.addEventListener("loadedmetadata", () => resolve(), { once: true });
-        });
-      }
+      setActiveRange({ startMs, endMs });
+      setCurrentMs(startMs);
       const mapped = mapToFile(startMs, endMs);
       originRef.current = { logical: startMs, file: mapped.start };
       stopAtRef.current = mapped.end;
-      audio.currentTime = mapped.start / 1000;
-      setCurrentMs(startMs);
-      await audio.play();
+      if (audio.readyState >= 1) {
+        audio.currentTime = mapped.start / 1000;
+      }
+      try {
+        await audio.play();
+      } catch {
+        await new Promise<void>((resolve) => {
+          audio.addEventListener("loadedmetadata", () => resolve(), { once: true });
+          window.setTimeout(() => resolve(), 800);
+        });
+        audio.currentTime = mapToFile(startMs, endMs).start / 1000;
+        await audio.play().catch(() => undefined);
+      }
     },
     [mapToFile],
   );
@@ -88,7 +92,7 @@ export function AudioPlayerProvider({
 
   const seekTo = useCallback(
     (startMs: number) => {
-      const clamped = Math.max(0, Math.min(startMs, resolvedDuration || startMs));
+      const clamped = Math.max(0, Math.min(startMs, durationMs || startMs));
       const audio = audioRef.current;
       if (!audio) return;
       const mapped = mapToFile(clamped, clamped + 1000);
@@ -96,7 +100,7 @@ export function AudioPlayerProvider({
       audio.currentTime = mapped.start / 1000;
       setCurrentMs(clamped);
     },
-    [resolvedDuration, mapToFile],
+    [durationMs, mapToFile],
   );
 
   const pause = useCallback(() => {
@@ -156,9 +160,10 @@ export function AudioPlayerProvider({
       setVolume,
       currentMs,
       playing,
-      durationMs: resolvedDuration,
+      durationMs,
       playbackRate,
       volume,
+      activeRange,
       audioRef,
     }),
     [
@@ -172,9 +177,10 @@ export function AudioPlayerProvider({
       setVolume,
       currentMs,
       playing,
-      resolvedDuration,
+      durationMs,
       playbackRate,
       volume,
+      activeRange,
     ],
   );
 
@@ -182,13 +188,13 @@ export function AudioPlayerProvider({
     <AudioPlayerContext.Provider value={value}>
       <audio
         ref={audioRef}
-        src={src}
-        preload="metadata"
+        src={env.useMocks ? "/demo-audio.wav" : src}
+        preload="auto"
+        playsInline
         onTimeUpdate={onTimeUpdate}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onLoadedMetadata={(e) => captureFileDuration(e.currentTarget)}
-        onDurationChange={(e) => captureFileDuration(e.currentTarget)}
+        onLoadedMetadata={(e) => setFileDurationMs(e.currentTarget.duration * 1000)}
       />
       {children}
     </AudioPlayerContext.Provider>
@@ -199,4 +205,8 @@ export function useAudioPlayer(): AudioApi {
   const ctx = useContext(AudioPlayerContext);
   if (!ctx) throw new Error("useAudioPlayer must be used within AudioPlayerProvider");
   return ctx;
+}
+
+export function useAudioPlayerOptional(): AudioApi | null {
+  return useContext(AudioPlayerContext);
 }

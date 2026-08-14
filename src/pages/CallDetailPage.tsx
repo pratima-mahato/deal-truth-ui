@@ -1,20 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Play, Send } from "lucide-react";
 import { callAudioUrl } from "@/api/endpoints/calls";
 import { isReportReadyStatus, isTerminalStatus } from "@/api/contracts";
 import { AudioPlayerProvider, useAudioPlayer } from "@/components/audio/AudioPlayerProvider";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
 import { EvidenceFocusProvider, useEvidenceFocus } from "@/components/evidence/EvidenceFocusContext";
 import { TranscriptPanel } from "@/components/transcript/TranscriptPanel";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { StatusPill } from "@/components/ui/Badge";
-import { Alert } from "@/components/ui/Alert";
-import { Modal } from "@/components/ui/Modal";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/EmptyState";
-import { Tabs } from "@/components/ui/Tabs";
 import { CustomerTruthSection } from "@/features/customer-truth/CustomerTruthSection";
 import { ObjectionsSection } from "@/features/objections/ObjectionsSection";
 import { RealityCheckSection } from "@/features/reality-check/RealityCheckSection";
@@ -26,31 +19,68 @@ import { FollowUpPanel } from "@/features/follow-up/FollowUpPanel";
 import { AskCallPanel } from "@/features/ask-call/AskCallPanel";
 import { SentimentChart } from "@/features/sentiment/SentimentChart";
 import { CompetitorsSection, MomentsTimeline } from "@/features/moments/MomentsAndCompetitors";
-import { OverviewStory } from "@/features/workspace/OverviewStory";
-import { OutlineView } from "@/features/workspace/OutlineView";
 import { CallInfoView } from "@/features/workspace/CallInfoView";
 import { InsightDrawer } from "@/features/workspace/InsightDrawer";
-import { CrmSendFlow } from "@/features/integrations/CrmSendFlow";
-import { SlackSetupDrawer } from "@/features/integrations/SlackSetupDrawer";
-import { CallIntegrationActions } from "@/features/integrations/CallIntegrationActions";
-import { annotationsForReport, buildOverviewModel } from "@/features/workspace/overviewModel";
+import { annotationsForReport } from "@/features/workspace/overviewModel";
+import { ProofRing, SignalBoard } from "@/features/signals/ProofRing";
+import { RefusedClaimsCard } from "@/features/gate/RefusedClaimsCard";
+import { CrmSendDialog } from "@/features/integrations/CrmSendDialog";
+import { proposeIntegrations } from "@/features/integrations/proposeActions";
+import type { CallMoment, CallReport, Transcript } from "@/api/contracts";
+import { DEMO_CLOSE_CRM, DEMO_OPEN_CRM, DEMO_PLAY_SEG, DEMO_SET_VIEW, protoSegToId } from "@/features/demo/demoEvents";
+import { deriveDimensions, resolveSegment } from "@/lib/evidence";
+import { PlayGlyph } from "@/components/brand/ChakraMark";
+import { StatusPill } from "@/components/ui/Badge";
+import { formatDate, formatDuration } from "@/lib/utils";
 import { useCall, useCallReport, useReanalyze, useShare, useSwapSpeakers, useTranscript } from "@/hooks/useCallApi";
-import { formatDate, formatDuration, resolveCallDurationMs } from "@/lib/utils";
-import { userFacingMessage } from "@/api/errors";
-import { sharedViewUrl } from "@/api/endpoints/share";
+
+const LANE_TICK_TARGET = 8;
+
+function laneTicks(report: CallReport, transcript: Transcript): CallMoment[] {
+  const extras: CallMoment[] = [];
+  const candidates: Array<{ id: string; kind: string; label: string; segmentId?: string }> = [
+    {
+      id: "m-sf",
+      kind: "requirement",
+      label: "Salesforce",
+      segmentId: report.customerTruth.find((f) => f.category === "requirement")?.evidence.segmentIds[0],
+    },
+    {
+      id: "m-soc2",
+      kind: "commitment",
+      label: "SOC2",
+      segmentId: report.commitments.find((c) => /soc2|security pack/i.test(c.action))?.evidence.segmentIds[0],
+    },
+  ];
+  for (const candidate of candidates) {
+    if (report.moments.length + extras.length >= LANE_TICK_TARGET) break;
+    const segment = candidate.segmentId ? resolveSegment(transcript, candidate.segmentId) : undefined;
+    if (!segment || !candidate.segmentId) continue;
+    extras.push({
+      id: candidate.id,
+      kind: candidate.kind,
+      label: candidate.label,
+      startMs: segment.startMs,
+      evidence: { segmentIds: [candidate.segmentId] },
+    });
+  }
+  return [...report.moments, ...extras].slice(0, LANE_TICK_TARGET);
+}
 
 const VIEWS = [
-  { id: "overview", label: "Overview" },
-  { id: "outline", label: "Outline" },
-  { id: "transcript", label: "Transcript" },
-  { id: "insights", label: "Insights" },
-  { id: "info", label: "Call Info" },
+  { id: "verdict", label: "Verdict" },
+  { id: "record", label: "The record" },
+  { id: "act", label: "What to do" },
+  { id: "brief", label: "Manager brief" },
 ] as const;
 
 type ViewId = (typeof VIEWS)[number]["id"];
 
 function parseView(value?: string): ViewId {
-  return VIEWS.some((v) => v.id === value) ? (value as ViewId) : "overview";
+  if (value === "overview" || value === "insights") return "verdict";
+  if (value === "outline" || value === "transcript") return "record";
+  if (value === "info") return "brief";
+  return VIEWS.some((v) => v.id === value) ? (value as ViewId) : "verdict";
 }
 
 export function CallDetailPage({
@@ -73,11 +103,14 @@ export function CallDetailPage({
   }
   if (!isTerminalStatus(call.data.status)) {
     return (
-      <Alert tone="info" title="Still processing">
-        <Link to={`/calls/${callId}/processing`} className="underline">
-          Watch processing stages
-        </Link>
-      </Alert>
+      <div className="page narrow">
+        <div className="card pad">
+          Still processing.{" "}
+          <Link to={`/calls/${callId}/processing`} style={{ color: "var(--brand)", fontWeight: 700 }}>
+            Watch processing stages
+          </Link>
+        </div>
+      </div>
     );
   }
   if (call.data.status === "FAILED") {
@@ -107,11 +140,9 @@ export function CallDetailPage({
     );
   }
 
-  const durationMs = resolveCallDurationMs(call.data.durationMs, transcript.data);
-
   return (
     <EvidenceFocusProvider>
-      <AudioPlayerProvider src={callAudioUrl(callId)} callDurationMs={durationMs}>
+      <AudioPlayerProvider src={callAudioUrl(callId)} callDurationMs={call.data.durationMs}>
         <CallDetailBody
           callId={callId}
           readOnly={readOnly}
@@ -131,8 +162,8 @@ function CallDetailBody({
 }: {
   callId: string;
   readOnly: boolean;
-  report: NonNullable<ReturnType<typeof useCallReport>["data"]>;
-  transcript: NonNullable<ReturnType<typeof useTranscript>["data"]>;
+  report: CallReport;
+  transcript: Transcript;
 }) {
   const [params] = useSearchParams();
   const { setFocus } = useEvidenceFocus();
@@ -141,230 +172,395 @@ function CallDetailBody({
   const reanalyze = useReanalyze(callId);
   const swap = useSwapSpeakers(callId);
   const navigate = useNavigate();
-  const [swapOpen, setSwapOpen] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [crmOpen, setCrmOpen] = useState(false);
-  const [notifySlack, setNotifySlack] = useState(false);
-  const [slackSetupOpen, setSlackSetupOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const unavailable = new Set(report.unavailableSections ?? []);
   const splat = useParams()["*"];
   const view = parseView(splat?.split("/")[0] || params.get("view") || undefined);
-  const model = useMemo(() => buildOverviewModel(report, transcript), [report, transcript]);
   const annotations = useMemo(() => annotationsForReport(report), [report]);
-  const durationMs = resolveCallDurationMs(report.call.durationMs, transcript);
+  const tiles = useMemo(() => deriveDimensions(report), [report]);
+  const ticks = useMemo(() => laneTicks(report, transcript), [report, transcript]);
 
-  function setView(next: string) {
-    const qs = params.toString();
-    navigate(`/calls/${callId}/${next}${qs ? `?${qs}` : ""}`, { replace: true });
-  }
+  const onShare = useCallback(() => {
+    share.mutate(undefined, {
+      onSuccess: (link) => {
+        const url = `${window.location.origin}/shared/${link.token}`;
+        setShareUrl(url);
+        void navigator.clipboard.writeText(url);
+      },
+    });
+  }, [share]);
+
+  const setView = useCallback(
+    (next: string) => {
+      const qs = params.toString();
+      navigate(`/calls/${callId}/${next}${qs ? `?${qs}` : ""}`, { replace: true });
+    },
+    [callId, navigate, params],
+  );
 
   useEffect(() => {
     const segment = params.get("segment");
     if (segment) {
       setFocus({ segmentIds: [segment], play: params.get("play") === "1" });
-      if (view !== "transcript") {
-        setView("transcript");
-      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.get("segment"), params.get("play")]);
+  }, [params, setFocus]);
+
+  useEffect(() => {
+    function onPlay(event: Event) {
+      const proto = (event as CustomEvent<string>).detail;
+      if (!proto) return;
+      setFocus({ segmentIds: [protoSegToId(proto)], play: true });
+    }
+    function onCrm() {
+      setCrmOpen(true);
+    }
+    function onCloseCrm() {
+      setCrmOpen(false);
+    }
+    function onView(event: Event) {
+      const next = (event as CustomEvent<string>).detail;
+      if (next) setView(next);
+    }
+    window.addEventListener(DEMO_PLAY_SEG, onPlay);
+    window.addEventListener(DEMO_OPEN_CRM, onCrm);
+    window.addEventListener(DEMO_CLOSE_CRM, onCloseCrm);
+    window.addEventListener(DEMO_SET_VIEW, onView);
+    return () => {
+      window.removeEventListener(DEMO_PLAY_SEG, onPlay);
+      window.removeEventListener(DEMO_OPEN_CRM, onCrm);
+      window.removeEventListener(DEMO_CLOSE_CRM, onCloseCrm);
+      window.removeEventListener(DEMO_SET_VIEW, onView);
+    };
+  }, [callId, navigate, params, setFocus, setView]);
 
   return (
-    <div className="flex h-[calc(100dvh-7.5rem)] min-h-0 flex-col">
-      <header className="mb-4 flex shrink-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-start gap-3 sm:items-center">
-          <Link to="/" className="text-sm text-ink-500 hover:text-ink-900">
-            <span className="inline-flex items-center gap-1">
-              <ArrowLeft className="h-4 w-4" />
-              Calls
+    <div className="page">
+      <div className="between" style={{ marginBottom: 14, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div className="hstack" style={{ marginBottom: 5, flexWrap: "wrap" }}>
+            <Link to="/" className="tiny" style={{ color: "var(--text-2)" }}>
+              ← Calls
+            </Link>
+            <StatusPill status={report.call.status} />
+            <span className="tiny mono">
+              {formatDuration(report.call.durationMs)} · {formatDate(report.call.createdAt)} · {transcript.speakers.length} speakers
             </span>
-          </Link>
-          <span className="text-ink-200">·</span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-lg font-semibold tracking-tight text-ink-900">
-                {report.call.customerName}
-              </h1>
-              <StatusPill status={report.call.status} />
-            </div>
-            <p className="text-sm text-ink-500">
-              {report.call.title} · {formatDate(report.call.createdAt)} · {formatDuration(durationMs)} ·{" "}
-              {transcript.speakers.length} participants
-            </p>
+          </div>
+          <h1 className="serif" style={{ fontSize: 31, letterSpacing: "-.02em", lineHeight: 1.1 }}>
+            {report.call.customerName.split("·")[1]?.trim() || report.call.customerName} — {report.call.title.toLowerCase()}
+          </h1>
+          <div className="sub" style={{ marginTop: 3 }}>
+            {report.call.customerName} · {report.call.repName} (rep) ·{" "}
+            <Link to="/deals/acme" style={{ color: "var(--brand)", fontWeight: 700 }}>
+              see how this deal moved →
+            </Link>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" onClick={() => void playFrom(0)}>
-            <Play className="h-4 w-4" />
-            Play call
-          </Button>
+        <div className="hstack" style={{ flexWrap: "wrap" }}>
           {!readOnly ? (
             <>
-              <Button variant="secondary" size="sm" onClick={() => setSwapOpen(true)}>
+              <button type="button" className="btn sm" onClick={() => void swap.mutate()}>
                 Swap speakers
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  share.mutate(undefined, {
-                    onSuccess: (link) => {
-                      const url = sharedViewUrl(link);
-                      setShareUrl(url || null);
-                      if (url) void navigator.clipboard.writeText(url);
-                    },
-                    onError: () => {
-                      setShareUrl(null);
-                    },
-                  })
-                }
-              >
+              </button>
+              <button type="button" className="btn sm" onClick={onShare}>
                 Share
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setNotifySlack(false);
-                  setCrmOpen(true);
-                }}
-              >
-                <Send className="h-4 w-4" />
+              </button>
+              <button type="button" className="btn sm" onClick={() => setCrmOpen(true)}>
                 Send to HubSpot
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
+              </button>
+              <button
+                type="button"
+                className="btn sm"
                 onClick={() =>
                   reanalyze.mutate(undefined, {
                     onSuccess: () => navigate(`/calls/${callId}/processing`),
                   })
                 }
               >
-                Reanalyze
-              </Button>
+                Re-analyse
+              </button>
             </>
           ) : null}
+          <button type="button" className="btn primary sm" onClick={() => void playFrom(0)}>
+            <PlayGlyph />
+            <span>Play evidence reel</span>
+          </button>
         </div>
-      </header>
-
-      {report.call.status === "PARTIAL" ? (
-        <div className="mb-4 shrink-0">
-          <Alert tone="warning" title="Partial report">
-            {report.call.failureMessage ?? "Some intelligence sections are unavailable. Available evidence still ships."}
-          </Alert>
+      </div>
+      {shareUrl ? <p className="tiny" style={{ marginBottom: 10, color: "var(--proof)" }}>Share link copied.</p> : null}
+      {report.call.status === "PARTIAL" || unavailable.size ? (
+        <div
+          className="card pad"
+          style={{ marginBottom: 14, borderColor: "var(--unproven-line)", background: "var(--unproven-soft)" }}
+        >
+          <div className="eyebrow" style={{ marginBottom: 4 }}>Partial report</div>
+          <div className="sub" style={{ fontSize: 12.5 }}>
+            {unavailable.has("buyerSentiment")
+              ? "Emotion analysis is temporarily unavailable — extraction and evidence are unaffected."
+              : "Baseline summary unavailable — extraction and evidence are unaffected."}
+            {unavailable.size ? ` Degraded: ${[...unavailable].join(", ")}.` : ""}
+          </div>
         </div>
       ) : null}
-      {shareUrl ? <p className="mb-3 shrink-0 text-xs text-emerald-800">Share link copied: {shareUrl}</p> : null}
-      {share.isError ? (
-        <div className="mb-3 shrink-0">
-          <Alert tone="danger" title="Could not create share link">
-            {userFacingMessage(share.error, "The API did not return a usable share token.")}
-          </Alert>
-        </div>
-      ) : null}
 
-      <div className="mb-4 shrink-0">
-        <Tabs tabs={[...VIEWS]} value={view} onChange={setView} />
+      <div className="viewtabs" style={{ marginBottom: 16 }}>
+        {VIEWS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={view === item.id ? "viewtab on" : "viewtab"}
+            onClick={() => setView(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-      {view === "overview" ? (
-        <div className="space-y-5">
-          <CallIntegrationActions
-            onSendHubSpot={() => {
-              setNotifySlack(false);
-              setCrmOpen(true);
-            }}
-            onConfigureSlack={() => setSlackSetupOpen(true)}
-            onNotifySlack={() => {
-              setNotifySlack(true);
-              setCrmOpen(true);
-            }}
+      <div className="workspace">
+        <div id="mainView">
+          {view === "verdict" ? <VerdictView report={report} transcript={transcript} tiles={tiles} callId={callId} /> : null}
+          {view === "record" ? (
+            <RecordView report={report} transcript={transcript} unavailable={unavailable} callId={callId} />
+          ) : null}
+          {view === "act" ? (
+            <ActView report={report} transcript={transcript} callId={callId} onCrm={() => setCrmOpen(true)} />
+          ) : null}
+          {view === "brief" ? (
+            <BriefView report={report} tiles={tiles} callId={callId} onShare={onShare} />
+          ) : null}
+        </div>
+        <aside className="rail">
+          <AudioPlayer
+            moments={ticks}
+            transcript={transcript}
+            seed={callId}
+            talkRatio={report.metrics.talkRatio}
+            onMomentClick={(moment) =>
+              setFocus({ insightId: moment.id, segmentIds: moment.evidence.segmentIds, play: true })
+            }
           />
-          <OverviewStory model={model} />
-        </div>
-      ) : null}
-      {view === "outline" ? (
-        <OutlineView sections={model.outline} durationMs={durationMs} transcript={transcript} />
-      ) : null}
-      {view === "transcript" ? (
-        <Card className="flex h-full min-h-0 flex-col overflow-hidden p-4">
-          <TranscriptPanel transcript={transcript} readOnly={readOnly} annotations={annotations} />
-        </Card>
-      ) : null}
-      {view === "insights" ? (
-        <div className="space-y-5">
-          <CustomerTruthSection facts={report.customerTruth} />
-          <ObjectionsSection objections={report.objections} />
-          <RealityCheckSection checks={report.realityChecks} />
-          <CommitmentLedger commitments={report.commitments} />
-          <DealKillersSection risks={report.risks} />
-          <CompetitorsSection competitors={report.competitors} />
-          <MomentsTimeline moments={report.moments} />
-          <BattlecardPanel card={report.nextCall} />
-          <ManagerBriefPanel brief={report.managerBrief} />
-          <FollowUpPanel callId={callId} initial={report.followUp} />
-          <AskCallPanel callId={callId} />
-          <SentimentChart sentiment={report.buyerSentiment} unavailable={unavailable.has("buyerSentiment")} />
-        </div>
-      ) : null}
-      {view === "info" ? <CallInfoView report={report} transcript={transcript} /> : null}
+          <TranscriptPanel transcript={transcript} readOnly={readOnly} annotations={annotations} callId={callId} />
+        </aside>
       </div>
 
-      <div className="mt-3 shrink-0 border-t border-ink-100 bg-paper pt-3">
-        <AudioPlayer
-          moments={report.moments}
-          transcript={transcript}
-          seed={callId}
-          onMomentClick={(moment) =>
-            setFocus({ insightId: moment.id, segmentIds: moment.evidence.segmentIds, play: true })
-          }
-        />
-      </div>
+      <InsightDrawer onJumpToTranscript={() => setView("record")} />
+      <CrmSendDialog open={crmOpen} onClose={() => setCrmOpen(false)} report={report} transcript={transcript} callId={callId} />
+    </div>
+  );
+}
 
-      <InsightDrawer onJumpToTranscript={() => setView("transcript")} />
-
-      <CrmSendFlow
-        open={crmOpen}
-        onClose={() => setCrmOpen(false)}
-        report={report}
-        transcript={transcript}
-        notifySlack={notifySlack}
-      />
-      <SlackSetupDrawer
-        open={slackSetupOpen}
-        onClose={() => setSlackSetupOpen(false)}
-        report={report}
-        transcript={transcript}
-      />
-
-      <Modal
-        open={swapOpen}
-        title="Swap seller and customer?"
-        onClose={() => setSwapOpen(false)}
-        footer={
+function VerdictCopy({ report }: { report: CallReport }) {
+  const refusedMeeting = report.risks.some((risk) => /next meeting|next step/i.test(risk.title) && risk.evidenceStatus === "SUPPORTED");
+  const security = report.risks.some((risk) => /security/i.test(risk.title) && risk.evidenceStatus === "SUPPORTED");
+  const competitor = report.competitors.length > 0;
+  const fit = /fit|intent|pain/i.test(`${report.summary.headline} ${report.buyingIntent.summary}`);
+  if (fit && (security || competitor || refusedMeeting)) {
+    return (
+      <>
+        Strong product fit.{" "}
+        {security ? <span style={{ color: "var(--blocker)" }}>Blocked by a security review</span> : null}
+        {competitor ? ", a live competitor" : null}
+        {refusedMeeting ? (
           <>
-            <Button variant="secondary" onClick={() => setSwapOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() =>
-                swap.mutate(undefined, {
-                  onSuccess: () => {
-                    setSwapOpen(false);
-                    navigate(`/calls/${callId}/processing`);
-                  },
+            , and <span style={{ color: "var(--blocker)" }}>a next meeting the customer refused to book.</span>
+          </>
+        ) : (
+          "."
+        )}
+      </>
+    );
+  }
+  return <>{report.summary.tldr || report.summary.headline}</>;
+}
+
+function VerdictView({
+  report,
+  transcript,
+  tiles,
+  callId,
+}: {
+  report: CallReport;
+  transcript: Transcript;
+  tiles: ReturnType<typeof deriveDimensions>;
+  callId: string;
+}) {
+  const { setFocus } = useEvidenceFocus();
+  return (
+    <div className="vstack" style={{ gap: 16 }}>
+      <div className="card pad-lg reveal">
+        <div className="eyebrow" style={{ marginBottom: 9 }}>
+          The verdict
+        </div>
+        <div className="serif" style={{ fontSize: 27, lineHeight: 1.22, letterSpacing: "-.015em", maxWidth: "34ch" }}>
+          <VerdictCopy report={report} />
+        </div>
+        <div className="hstack" style={{ marginTop: 14, flexWrap: "wrap" }}>
+          {tiles.map((tile) => (
+            <span
+              key={tile.id}
+              className={`chip ${tile.state === "proven" ? "proof" : tile.state === "missing" ? "absent" : "blocker"}`}
+            >
+              {tile.label}
+            </span>
+          ))}
+        </div>
+        <p className="invariant" style={{ marginTop: 14 }}>
+          Every line below can be played back in the customer's own voice. No close probability — only what was observed.
+        </p>
+      </div>
+
+      <div className="card pad-lg reveal">
+        <div className="hstack" style={{ gap: 26, alignItems: "center", flexWrap: "wrap" }}>
+          <ProofRing tiles={tiles} />
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div className="between" style={{ marginBottom: 10 }}>
+              <span className="h-sec">The eight dimensions</span>
+              <span className="tiny">no close probability — only what was observed</span>
+            </div>
+            <SignalBoard
+              tiles={tiles}
+              onSelect={(tile) =>
+                setFocus({
+                  insightId: tile.id,
+                  segmentIds: tile.segmentIds,
+                  play: false,
+                  drawer: { id: tile.id, title: tile.label, kind: "signal", why: tile.why },
                 })
               }
-            >
-              Swap and reanalyze
-            </Button>
-          </>
-        }
-      >
-        Changing roles invalidates customer-only insights and queues a new analysis. The original transcript is kept.
-      </Modal>
+            />
+          </div>
+        </div>
+      </div>
+
+      <RealityCheckSection checks={report.realityChecks} transcript={transcript} />
+      <CustomerTruthSection facts={report.customerTruth} transcript={transcript} />
+      <DealKillersSection risks={report.risks} transcript={transcript} />
+      <RefusedClaimsCard callId={callId} />
+    </div>
+  );
+}
+
+function RecordView({
+  report,
+  transcript,
+  unavailable,
+  callId,
+}: {
+  report: CallReport;
+  transcript: Transcript;
+  unavailable: Set<string>;
+  callId: string;
+}) {
+  return (
+    <div className="vstack" style={{ gap: 16 }}>
+      <MomentsTimeline moments={report.moments} durationMs={report.call.durationMs} />
+      <SentimentChart
+        sentiment={report.buyerSentiment}
+        unavailable={unavailable.has("buyerSentiment")}
+        transcript={transcript}
+      />
+      <div className="split">
+        <ObjectionsSection objections={report.objections} transcript={transcript} />
+        <div className="vstack" style={{ gap: 14 }}>
+          <CompetitorsSection competitors={report.competitors} transcript={transcript} />
+          <CallInfoView report={report} transcript={transcript} />
+        </div>
+      </div>
+      <AskCallPanel callId={callId} />
+    </div>
+  );
+}
+
+function ActView({
+  report,
+  transcript,
+  callId,
+  onCrm,
+}: {
+  report: CallReport;
+  transcript: Transcript;
+  callId: string;
+  onCrm: () => void;
+}) {
+  const proposed = proposeIntegrations(report);
+  return (
+    <div className="vstack" style={{ gap: 16 }}>
+      <div className="card pad-lg reveal">
+        <div className="between" style={{ marginBottom: 10 }}>
+          <span className="eyebrow">CRM & team actions</span>
+          <span className="tiny">the gate applies to your pipeline too</span>
+        </div>
+        <div className="split">
+          <div style={{ border: "1px solid var(--proof-line)", background: "var(--proof-soft)", borderRadius: 12, padding: "12px 14px" }}>
+            <div className="between" style={{ marginBottom: 5 }}>
+              <span style={{ fontWeight: 800, fontSize: 13.5 }}>HubSpot</span>
+              <span className="chip proof">✓ Connected</span>
+            </div>
+            <div className="sub" style={{ fontSize: 12.5, marginBottom: 10 }}>
+              {proposed.crmActions.filter((action) => action.state === "SUPPORTED").length} fields carry evidence ·{" "}
+              {proposed.crmActions.filter((action) => action.state === "MANUAL").length} need you ·{" "}
+              <b style={{ color: "var(--blocker)" }}>
+                {proposed.crmActions.filter((action) => action.state === "BLOCKED").length} refused
+              </b>
+            </div>
+            <button type="button" className="btn sm primary" onClick={onCrm}>
+              Send intelligence
+            </button>
+          </div>
+          <div style={{ border: "1px solid var(--proof-line)", background: "var(--proof-soft)", borderRadius: 12, padding: "12px 14px" }}>
+            <div className="between" style={{ marginBottom: 5 }}>
+              <span style={{ fontWeight: 800, fontSize: 13.5 }}>Slack</span>
+              <span className="chip proof">✓ Connected</span>
+            </div>
+            <div className="sub" style={{ fontSize: 12.5, marginBottom: 10 }}>
+              {proposed.slack.value}. Alert the team when a deal risk, a refused claim, or a lost dimension appears.
+            </div>
+            <Link to="/integrations" className="btn sm">
+              Manage alerts
+            </Link>
+          </div>
+        </div>
+      </div>
+      <BattlecardPanel card={report.nextCall} transcript={transcript} commitments={report.commitments} />
+      <CommitmentLedger commitments={report.commitments} transcript={transcript} />
+      <FollowUpPanel callId={callId} initial={report.followUp} transcript={transcript} />
+    </div>
+  );
+}
+
+function BriefView({
+  report,
+  tiles,
+  callId,
+  onShare,
+}: {
+  report: CallReport;
+  tiles: ReturnType<typeof deriveDimensions>;
+  callId: string;
+  onShare: () => void;
+}) {
+  return (
+    <div className="vstack" style={{ gap: 16 }}>
+      <ManagerBriefPanel brief={report.managerBrief} tiles={tiles} callId={callId} />
+      <div className="card pad-lg reveal">
+        <div className="h-sec" style={{ marginBottom: 11 }}>
+          Deal signals at a glance
+        </div>
+        <SignalBoard tiles={tiles} />
+      </div>
+      <div className="card pad-lg reveal">
+        <div className="between" style={{ marginBottom: 10 }}>
+          <span className="h-sec">Share this report</span>
+          <button type="button" className="btn sm primary" onClick={onShare}>
+            Create link
+          </button>
+        </div>
+        <div className="sub" style={{ fontSize: 12.5 }}>
+          A read-only page with the evidence playable. Expires in 7 days, revocable any time. Nobody needs an account to
+          open it.
+        </div>
+      </div>
     </div>
   );
 }

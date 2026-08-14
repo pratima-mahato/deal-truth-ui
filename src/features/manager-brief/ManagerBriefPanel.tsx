@@ -1,61 +1,146 @@
 import type { ManagerBrief } from "@/api/contracts";
-import { Card, CardHeader } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import type { DimensionTile } from "@/lib/evidence";
+import { GATE_CLAIMS_REFUSED, GATE_CLAIMS_SHIPPED, splitProse } from "@/lib/evidence";
+import { downloadCallExport } from "@/api/endpoints/calls";
+import { useState } from "react";
 
-export function ManagerBriefPanel({ brief }: { brief: ManagerBrief }) {
+export function ManagerBriefPanel({
+  brief,
+  tiles,
+  callId,
+}: {
+  brief: ManagerBrief;
+  tiles?: DimensionTile[];
+  callId?: string;
+}) {
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const whyBuy = splitProse(brief.whyTheyBuy);
+  const missing = (tiles ?? []).filter((tile) => tile.state === "missing");
+
   function copy() {
     const text = [
       brief.dealLabel,
-      `Why they buy: ${brief.whyTheyBuy}`,
+      `Why they buy: ${whyBuy.join(" ")}`,
       `Why they don't: ${brief.whyTheyDont.join("; ")}`,
-      `Intent: ${brief.intent}`,
-      `Competition: ${brief.competition}`,
+      brief.intent ? `Intent: ${brief.intent}` : "",
+      brief.competition ? `Competition: ${brief.competition}` : "",
       `Biggest risk: ${brief.biggestRisk}`,
-      `Customer commitment: ${brief.customerCommitment}`,
       `Next move: ${brief.nextMove}`,
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
     void navigator.clipboard.writeText(text);
   }
 
+  async function exportMarkdown() {
+    if (!callId) return;
+    setExportError(null);
+    setExporting(true);
+    try {
+      await downloadCallExport(callId, "markdown");
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "Export failed.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
-    <Card>
-      <CardHeader title="Manager Brief" action={<Button size="sm" variant="secondary" onClick={copy}>Copy</Button>} />
-      <dl className="grid gap-3 p-5 text-sm md:grid-cols-2">
+    <div className="card pad-lg reveal">
+      <div className="between" style={{ marginBottom: 14 }}>
         <div>
-          <dt className="text-xs font-semibold uppercase text-slate-500">Why they buy</dt>
-          <dd className="mt-1">{brief.whyTheyBuy}</dd>
+          <div className="eyebrow" style={{ marginBottom: 5 }}>
+            Manager brief · 30 seconds
+          </div>
+          <div className="serif" style={{ fontSize: 26, letterSpacing: "-.015em" }}>
+            {brief.dealLabel}
+          </div>
+        </div>
+        <div className="hstack">
+          <button type="button" className="btn sm" onClick={copy}>
+            Copy
+          </button>
+          {callId ? (
+            <button type="button" className="btn sm" onClick={() => void exportMarkdown()} disabled={exporting}>
+              {exporting ? "Exporting…" : "Export .md"}
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <div className="split">
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 8, color: "var(--proof)" }}>
+            Why they buy
+          </div>
+          <ul className="vstack" style={{ gap: 7 }}>
+            {whyBuy.map((item) => (
+              <li key={item} className="hstack" style={{ alignItems: "flex-start", gap: 8 }}>
+                <span className="dot" style={{ color: "var(--proof)", marginTop: 6 }} />
+                <span style={{ fontSize: 12.5, lineHeight: 1.6 }}>{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase text-slate-500">Why they don't</dt>
-          <dd className="mt-1">
-            <ul className="list-disc pl-4">
-              {brief.whyTheyDont.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </dd>
+          <div className="eyebrow" style={{ marginBottom: 8, color: "var(--blocker)" }}>
+            Why they don't
+          </div>
+          <ul className="vstack" style={{ gap: 7 }}>
+            {brief.whyTheyDont.map((item) => (
+              <li key={item} className="hstack" style={{ alignItems: "flex-start", gap: 8 }}>
+                <span className="dot" style={{ color: "var(--blocker)", marginTop: 6 }} />
+                <span style={{ fontSize: 12.5, lineHeight: 1.6 }}>{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase text-slate-500">Intent</dt>
-          <dd className="mt-1">{brief.intent}</dd>
+      </div>
+      <div className="split" style={{ marginTop: 16 }}>
+        <div
+          style={{
+            border: "1px solid var(--blocker-line)",
+            background: "var(--blocker-soft)",
+            borderRadius: 12,
+            padding: "12px 14px",
+          }}
+        >
+          <div className="eyebrow" style={{ marginBottom: 5 }}>
+            Biggest risk
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.55, fontWeight: 600 }}>{brief.biggestRisk}</div>
         </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase text-slate-500">Competition</dt>
-          <dd className="mt-1">{brief.competition}</dd>
+        <div
+          style={{
+            border: "1px solid var(--brand-line)",
+            background: "var(--brand-soft)",
+            borderRadius: 12,
+            padding: "12px 14px",
+          }}
+        >
+          <div className="eyebrow" style={{ marginBottom: 5, color: "var(--brand)" }}>
+            Next move
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.55, fontWeight: 600 }}>{brief.nextMove}</div>
         </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase text-slate-500">Biggest risk</dt>
-          <dd className="mt-1">{brief.biggestRisk}</dd>
+      </div>
+      <div className="hstack" style={{ marginTop: 14, flexWrap: "wrap" }}>
+        <span className="chip unproven">Customer commitment: {brief.customerCommitment}</span>
+        {missing.map((tile) => (
+          <span key={tile.id} className="chip absent">
+            No {tile.label.replace(/ identified$/i, "").toLowerCase()}
+          </span>
+        ))}
+        <span className="chip proof">{GATE_CLAIMS_SHIPPED} claims with proof</span>
+        <span className="chip blocker">{GATE_CLAIMS_REFUSED} claims refused</span>
+      </div>
+      {brief.intent || brief.competition ? (
+        <div className="sub" style={{ fontSize: 12.5, marginTop: 12 }}>
+          {brief.intent ? <>{brief.intent} </> : null}
+          {brief.competition ? <>Competition: {brief.competition}</> : null}
         </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase text-slate-500">Customer commitment</dt>
-          <dd className="mt-1">{brief.customerCommitment}</dd>
-        </div>
-        <div className="md:col-span-2">
-          <dt className="text-xs font-semibold uppercase text-slate-500">Next move</dt>
-          <dd className="mt-1 font-medium">{brief.nextMove}</dd>
-        </div>
-      </dl>
-    </Card>
+      ) : null}
+      {exportError ? <p className="tiny" style={{ marginTop: 8, color: "var(--blocker)" }}>{exportError}</p> : null}
+    </div>
   );
 }

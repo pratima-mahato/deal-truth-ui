@@ -12,14 +12,16 @@ RUN npm ci --no-audit --no-fund --include=dev --legacy-peer-deps
 
 COPY . .
 
-# Vite inlines VITE_* at build time. Production image always ships with
-# mocks off; the API origin is injected at container start via config.js
-# and/or nginx API_UPSTREAM so Render env vars work without a rebuild.
-ARG VITE_API_BASE_URL=
-ARG VITE_USE_MOCKS=false
+# Vite inlines VITE_* at build time. Pin these so Render dashboard env vars
+# cannot leak into the public bundle. API origin/key are injected at runtime
+# via config.js and nginx API_UPSTREAM / API_KEY.
 ARG VITE_DEMO_CALL_ID=call-acme-saas-labs
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
-    VITE_USE_MOCKS=$VITE_USE_MOCKS \
+ENV VITE_API_BASE_URL= \
+    VITE_USE_MOCKS=false \
+    VITE_API_KEY= \
+    VITE_INTEGRATION_API_BASE_URL= \
+    VITE_INTEGRATION_API_TOKEN= \
+    VITE_USE_MOCK_INTEGRATIONS=false \
     VITE_DEMO_CALL_ID=$VITE_DEMO_CALL_ID \
     NODE_ENV=production
 
@@ -29,7 +31,8 @@ FROM nginx:1.27-alpine AS production
 
 RUN apk add --no-cache wget \
   && mkdir -p /etc/nginx/snippets /tmp \
-  && rm -f /etc/nginx/conf.d/default.conf
+  && rm -f /etc/nginx/conf.d/default.conf \
+  && rm -f /etc/nginx/conf.d/*.conf
 
 COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY docker/security-headers.conf.template /etc/nginx/snippets/security-headers.conf.template

@@ -42,7 +42,8 @@ export const northstarCall: Call = {
   completedAt: "2026-08-10T11:40:00.000Z",
   sourceType: "upload",
   biggestRisk: "Pricing objection",
-  signalBadges: ["Pricing objection", "Next meeting set"],
+  signalBadges: ["Pricing objection", "Next meeting set", "Pain identified", "Impact quantified", "Decision maker"],
+  signalPips: ["proven", "proven", "proven", "missing", "proven", "proven", "missing", "weak"],
 };
 
 export const helixCall: Call = {
@@ -60,7 +61,8 @@ export const helixCall: Call = {
   completedAt: "2026-08-09T16:50:00.000Z",
   sourceType: "upload",
   biggestRisk: "No next step",
-  signalBadges: ["Pain identified", "No next meeting"],
+  signalBadges: ["Pain identified", "No next meeting", "Decision maker"],
+  signalPips: ["proven", "missing", "proven", "missing", "missing", "blocked", "missing", "missing"],
 };
 
 export const orbitCall: Call = {
@@ -78,7 +80,8 @@ export const orbitCall: Call = {
   completedAt: "2026-08-08T09:55:00.000Z",
   sourceType: "upload",
   biggestRisk: "Competitor preference",
-  signalBadges: ["Competitor mentioned", "Security blocker"],
+  signalBadges: ["Competitor mentioned", "Security blocker", "Pain identified", "Impact quantified", "Decision maker", "Economic buyer"],
+  signalPips: ["proven", "proven", "proven", "proven", "weak", "weak", "blocked", "missing"],
 };
 
 export const lumenCall: Call = {
@@ -99,7 +102,8 @@ export const lumenCall: Call = {
   completedAt: "2026-08-12T13:32:00.000Z",
   sourceType: "upload",
   biggestRisk: "Budget blocker",
-  signalBadges: ["Partial report"],
+  signalBadges: ["Partial report", "Pain identified", "Impact quantified", "Budget blocker", "Timeline"],
+  signalPips: ["proven", "proven", "missing", "blocked", "proven", "missing", "missing", "blocked"],
 };
 
 export const vegaCall: Call = {

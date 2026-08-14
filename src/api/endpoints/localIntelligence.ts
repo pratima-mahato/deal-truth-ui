@@ -140,8 +140,8 @@ export async function recommendationsFromLoadedCalls(): Promise<RecommendationsR
       {
         id: "rec-pricing",
         kind: "aggregate_insight" as const,
-        title: "Pricing objections",
-        description: `${pricing.length} calls mention pricing concerns`,
+        title: `${pricing.length} pricing objection${pricing.length === 1 ? "" : "s"} went unresolved`,
+        description: `${pricing.length} pricing objection${pricing.length === 1 ? "" : "s"} went unresolved`,
         count: pricing.length,
         query: "pricing",
         callIds: pricing.map((r) => r.call.id),
@@ -149,8 +149,8 @@ export async function recommendationsFromLoadedCalls(): Promise<RecommendationsR
       {
         id: "rec-next",
         kind: "aggregate_insight" as const,
-        title: "No next step",
-        description: `${noNext.length} calls have no clear next meeting`,
+        title: `${noNext.length} call${noNext.length === 1 ? "" : "s"} ended with no next meeting`,
+        description: `${noNext.length} call${noNext.length === 1 ? "" : "s"} ended with no next meeting`,
         count: noNext.length,
         query: "next meeting",
         callIds: noNext.map((r) => r.call.id),
@@ -158,8 +158,8 @@ export async function recommendationsFromLoadedCalls(): Promise<RecommendationsR
       {
         id: "rec-comp",
         kind: "aggregate_insight" as const,
-        title: "Competitor mentions",
-        description: `${competitor.length} calls show competitor risk`,
+        title: `${competitor.length} competitor${competitor.length === 1 ? "" : "s"} active in open deals`,
+        description: `${competitor.length} competitor${competitor.length === 1 ? "" : "s"} are active in open deals`,
         count: competitor.length,
         query: "competitor",
         callIds: competitor.map((r) => r.call.id),
@@ -167,8 +167,8 @@ export async function recommendationsFromLoadedCalls(): Promise<RecommendationsR
       {
         id: "rec-sec",
         kind: "saved_search" as const,
-        title: "Security blockers",
-        description: `${security.length} calls require security review`,
+        title: `${security.length} deal${security.length === 1 ? "" : "s"} behind a security review`,
+        description: `${security.length} deal${security.length === 1 ? "" : "s"} are behind a security review`,
         count: security.length,
         query: "security",
         callIds: security.map((r) => r.call.id),

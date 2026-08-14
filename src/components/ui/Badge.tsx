@@ -1,6 +1,18 @@
 import { cn } from "@/lib/utils";
 import type { CallStatus, EvidenceStatus, Severity } from "@/api/contracts";
 
+export function Chip({
+  children,
+  tone = "neutral",
+  className,
+}: {
+  children: string;
+  tone?: "neutral" | "proof" | "unproven" | "blocker" | "absent" | "brand";
+  className?: string;
+}) {
+  return <span className={cn("chip", tone === "neutral" ? undefined : tone, className)}>{children}</span>;
+}
+
 export function Badge({
   children,
   tone = "neutral",
@@ -10,54 +22,42 @@ export function Badge({
   tone?: "neutral" | "positive" | "warning" | "danger" | "info" | "violet";
   className?: string;
 }) {
-  const tones = {
-    neutral: "bg-ink-50 text-ink-700",
-    positive: "bg-emerald-50 text-emerald-800",
-    warning: "bg-amber-50 text-amber-800",
-    danger: "bg-red-50 text-red-800",
-    info: "bg-sky-50 text-sky-800",
-    violet: "bg-violet-50 text-violet-700",
-  };
+  const mapped =
+    tone === "positive" ? "proof" : tone === "warning" ? "unproven" : tone === "danger" ? "blocker" : tone === "violet" || tone === "info" ? "brand" : undefined;
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
-        tones[tone],
-        className,
-      )}
-    >
+    <span className={cn("chip", mapped, className)}>
       {children}
     </span>
   );
 }
 
 export function StatusPill({ status }: { status: CallStatus }) {
-  const map: Record<CallStatus, { label: string; tone: "neutral" | "positive" | "warning" | "danger" | "info" | "violet" }> = {
+  const map: Record<CallStatus, { label: string; tone: "neutral" | "proof" | "unproven" | "blocker" | "brand" }> = {
     CREATED: { label: "Created", tone: "neutral" },
-    UPLOADING: { label: "Uploading", tone: "violet" },
-    QUEUED: { label: "Queued", tone: "info" },
-    TRANSCRIBING: { label: "Transcribing", tone: "violet" },
-    WAITING_FOR_RECAP: { label: "Speakers", tone: "violet" },
-    ANALYZING: { label: "Understanding", tone: "violet" },
-    VALIDATING: { label: "Signals", tone: "violet" },
-    INDEXING: { label: "Indexing", tone: "violet" },
-    BUILDING_REPORT: { label: "Intelligence", tone: "violet" },
-    SHIPPED: { label: "Ready", tone: "positive" },
-    PARTIAL: { label: "Partial", tone: "warning" },
-    FAILED: { label: "Failed", tone: "danger" },
+    UPLOADING: { label: "Uploading", tone: "brand" },
+    QUEUED: { label: "Queued", tone: "brand" },
+    TRANSCRIBING: { label: "Transcribing", tone: "brand" },
+    WAITING_FOR_RECAP: { label: "Speakers", tone: "brand" },
+    ANALYZING: { label: "Understanding", tone: "brand" },
+    VALIDATING: { label: "Signals", tone: "brand" },
+    INDEXING: { label: "Indexing", tone: "brand" },
+    BUILDING_REPORT: { label: "Intelligence", tone: "brand" },
+    SHIPPED: { label: "SHIPPED", tone: "proof" },
+    PARTIAL: { label: "PARTIAL", tone: "unproven" },
+    FAILED: { label: "FAILED", tone: "blocker" },
     CANCELLED: { label: "Cancelled", tone: "neutral" },
   };
   const item = map[status];
-  return <Badge tone={item.tone}>{item.label}</Badge>;
+  return <Chip tone={item.tone}>{item.label}</Chip>;
 }
 
 export function SeverityBadge({ severity }: { severity: Severity }) {
-  const tone = severity === "high" ? "danger" : severity === "medium" ? "warning" : "neutral";
-  return <Badge tone={tone}>{severity}</Badge>;
+  const tone = severity === "high" ? "blocker" : severity === "medium" ? "unproven" : "neutral";
+  return <Chip tone={tone}>{severity}</Chip>;
 }
 
 export function EvidenceStatusBadge({ status }: { status: EvidenceStatus }) {
-  if (status === "SUPPORTED") return <Badge tone="positive">Supported</Badge>;
-  if (status === "ABSENCE_BASED") return <Badge tone="warning">Absence-based</Badge>;
-  return <Badge tone="warning">Unconfirmed</Badge>;
+  if (status === "SUPPORTED") return <Chip tone="proof">PROVEN</Chip>;
+  if (status === "ABSENCE_BASED") return <Chip tone="absent">NOT FOUND</Chip>;
+  return <Chip tone="unproven">UNCONFIRMED</Chip>;
 }

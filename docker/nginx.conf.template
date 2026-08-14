@@ -1,7 +1,8 @@
+daemon off;
 user nginx;
 worker_processes auto;
 error_log /dev/stderr warn;
-pid /run/nginx.pid;
+pid /tmp/nginx.pid;
 
 events {
   worker_connections 1024;
@@ -42,7 +43,7 @@ http {
   }
 
   server {
-    listen __LISTEN_PORT__;
+    listen 0.0.0.0:__LISTEN_PORT__;
     server_name _;
     root /usr/share/nginx/html;
     index index.html;

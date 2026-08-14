@@ -1,13 +1,20 @@
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/Input";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { applyTheme, readStoredTheme, toggleTheme } from "@/lib/theme";
+import { ChakraMark } from "@/components/brand/ChakraMark";
+import { DemoLayer } from "@/features/demo/DemoLayer";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen">
+    <div className="shell">
+      <div className="tiranga" aria-hidden>
+        <i />
+        <i />
+        <i />
+      </div>
       <TopNav />
-      <main className="mx-auto max-w-[1440px] px-4 py-4 sm:px-8 sm:py-6">{children}</main>
+      <main>{children}</main>
+      <DemoLayer />
     </div>
   );
 }
@@ -15,6 +22,24 @@ export function AppShell({ children }: { children: ReactNode }) {
 export function TopNav() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const initial = readStoredTheme();
+    applyTheme(initial);
+    setTheme(initial);
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        setTheme(toggleTheme());
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   function onSearch(e: FormEvent) {
     e.preventDefault();
@@ -23,40 +48,53 @@ export function TopNav() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-ink-100/80 bg-paper/90 backdrop-blur">
-      <div className="mx-auto flex max-w-[1440px] items-center gap-2 px-4 py-3 sm:gap-4 sm:px-8">
-        <Link to="/" className="flex shrink-0 items-center gap-2.5 font-semibold tracking-tight text-ink-900">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-[11px] font-bold text-white">
-            OG
+    <header className="topbar">
+      <div className="topbar-inner">
+        <Link to="/" className="brand">
+          <span className="brandmark">
+            <ChakraMark />
           </span>
-          <span className="hidden sm:inline">OpenGong</span>
+          <span className="brandname">
+            Deal<em> </em>Truth
+          </span>
         </Link>
-        <nav className="flex shrink-0 items-center gap-2 text-xs sm:gap-4 sm:text-sm text-ink-500">
-          <NavLink to="/" className={({ isActive }) => (isActive ? "text-ink-900" : "hover:text-ink-800")}>
-            Workspace
+        <nav className="navlinks">
+          <NavLink to="/" end className={({ isActive }) => (isActive ? "navlink on" : "navlink")}>
+            Calls
           </NavLink>
-          <NavLink to="/upload" className={({ isActive }) => (isActive ? "text-ink-900" : "hover:text-ink-800")}>
-            Upload
-          </NavLink>
-          <NavLink to="/search" className={({ isActive }) => (isActive ? "text-ink-900" : "hover:text-ink-800")}>
+          <NavLink to="/search" className={({ isActive }) => (isActive ? "navlink on" : "navlink")}>
             Search
           </NavLink>
-          <NavLink to="/integrations" className={({ isActive }) => (isActive ? "text-ink-900" : "hover:text-ink-800")}>
+          <NavLink to="/upload" className={({ isActive }) => (isActive ? "navlink on" : "navlink")}>
+            Upload
+          </NavLink>
+          <NavLink to="/deals/acme" className={({ isActive }) => (isActive ? "navlink on" : "navlink")}>
+            Acme deal
+          </NavLink>
+          <NavLink to="/integrations" className={({ isActive }) => (isActive ? "navlink on" : "navlink")}>
             Integrations
           </NavLink>
         </nav>
-        <form onSubmit={onSearch} className="ml-auto flex min-w-0 flex-1 max-w-xl items-center gap-2">
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search calls…"
-              className="pl-9"
-              aria-label="Global search"
-            />
-          </div>
+        <span className="grow" />
+        <form onSubmit={onSearch} className="hstack" style={{ minWidth: 0 }}>
+          <input
+            className="inp"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search calls…"
+            aria-label="Global search"
+            style={{ width: 180 }}
+          />
         </form>
+        <button
+          type="button"
+          className="iconbtn"
+          title="Toggle theme (⌘D)"
+          aria-label="Toggle theme"
+          onClick={() => setTheme(toggleTheme())}
+        >
+          {theme === "dark" ? "☀" : "☾"}
+        </button>
       </div>
     </header>
   );
@@ -72,10 +110,12 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="between" style={{ marginBottom: 18, flexWrap: "wrap", gap: 14 }}>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink-900">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-ink-500">{description}</p> : null}
+        <h1 className="serif" style={{ fontSize: 32, letterSpacing: "-.02em" }}>
+          {title}
+        </h1>
+        {description ? <p className="sub" style={{ marginTop: 8 }}>{description}</p> : null}
       </div>
       {actions}
     </div>

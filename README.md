@@ -1,10 +1,10 @@
 <div align="center">
 
-# OpenGong
+# Deal Truth
 
 **Turn conversations into deal intelligence.**
 
-Upload a sales call. Get a transcript, a score, and every claim tied back to the exact moment it was said.
+Upload a sales call. Get notes with receipts — every claim tied back to the exact moment it was said.
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=111)](https://react.dev/)
@@ -19,9 +19,9 @@ Upload a sales call. Get a transcript, a score, and every claim tied back to the
 
 ---
 
-OpenGong is the standalone web client for **Deal Truth** — an evidence-first conversation intelligence product. It is not a dashboard of AI summaries. Every signal, objection, and follow-up sentence can jump to the transcript and play the audio.
+Deal Truth is the standalone web client for evidence-first conversation intelligence. It is not a dashboard of AI summaries. Every signal, objection, and follow-up sentence can jump to the transcript and play the audio.
 
-> **Deal Truth** is the API. **OpenGong** is the workspace you actually use.
+> **No proof in the transcript, no claim in the report.**
 
 ```
 Upload  →  Transcribe  →  Analyze  →  Evidence-linked report
@@ -29,28 +29,27 @@ Upload  →  Transcribe  →  Analyze  →  Evidence-linked report
 
 ## Why it exists
 
-Most call tools tell you *what happened*. OpenGong tells you **what you can prove**.
+Most call tools tell you *what happened*. Deal Truth tells you **what you can prove**.
 
-| Typical call intelligence | OpenGong |
+| Typical call intelligence | Deal Truth |
 | --- | --- |
-| A generated paragraph | A scored narrative with clickable evidence |
+| A generated paragraph | A verdict with clickable receipts |
 | “The customer likes the product” | The exact quote, speaker, and timestamp |
-| A follow-up draft you hope is accurate | Sentences that stay until you remove unsupported claims |
+| A follow-up draft you hope is accurate | A send button locked until unsupported claims are gone |
 | A dump of insights | Reality checks: seller implied vs. customer said |
 
 ## What it does
 
 **Workspace** — Drop an audio file on the home page, or open recent conversations with deal-risk badges and next-step recommendations.
 
-**Call intelligence** — Five views on every shipped call:
+**Call intelligence** — Four views on every shipped call, with the transcript always mounted in the right rail:
 
 | View | What you get |
 | --- | --- |
-| **Overview** | Score, narrative, buying signals, and attention items |
-| **Outline** | Timed chapters you can jump into |
-| **Transcript** | Speakers, annotations, and play-from-here |
-| **Insights** | The full intelligence stack (below) |
-| **Call info** | Metadata, participants, and export |
+| **Verdict** | Verdict sentence, proof ring, reality checks, customer truth, deal killers, refused claims |
+| **The record** | Moments, sentiment axes, objections, competitors, metrics |
+| **What to do** | Battlecard, commitment ledger, evidence-safe follow-up |
+| **Manager brief** | 30-second briefing, signals, share + export |
 
 **Insights stack**
 
@@ -96,6 +95,15 @@ VITE_API_BASE_URL=http://localhost:8000
 VITE_USE_MOCKS=false
 ```
 
+To call the HubSpot/Slack integration service (no tokens or webhooks in this file):
+
+```bash
+# .env
+VITE_INTEGRATION_API_BASE_URL=http://localhost:4001
+VITE_INTEGRATION_API_TOKEN=
+VITE_USE_MOCK_INTEGRATIONS=false
+```
+
 Restart the Vite server after changing env vars.
 
 ## Configuration
@@ -108,6 +116,9 @@ Copy [`.env.example`](.env.example). Values are read at build time (`VITE_*`).
 | `VITE_USE_MOCKS` | `true` / `false`. Defaults to **on** when no API URL is set. |
 | `VITE_DEMO_CALL_ID` | Call opened by `/demo` (default `call-acme-saas-labs`). |
 | `VITE_API_KEY` | Optional. Sent as `X-API-Key`. Never commit a real key. |
+| `VITE_INTEGRATION_API_BASE_URL` | HubSpot/Slack integration service origin. Browser calls `{origin}/v1/hubspot`. Empty → same-origin `/integrations-api` proxy. |
+| `VITE_INTEGRATION_API_TOKEN` | Integration API token, sent as `Authorization: Bearer`. Visible in the Vite bundle — use `INTEGRATION_API_TOKEN` on Docker/Render instead. |
+| `VITE_USE_MOCK_INTEGRATIONS` | `true` / `false`. Defaults to **on** when no integration origin is set. Independent of `VITE_USE_MOCKS`. |
 | `VITE_NGROK_SKIP_BROWSER_WARNING` | Set when the API is reached through ngrok. |
 
 Secrets belong in `.env` (gitignored) or your host’s secret store — not in source, Dockerfiles, or this README.
@@ -130,7 +141,7 @@ Secrets belong in `.env` (gitignored) or your host’s secret store — not in s
 
 ```mermaid
 flowchart LR
-  subgraph UI["OpenGong"]
+  subgraph UI["Deal Truth"]
     Pages["Pages"]
     Features["Feature panels"]
     API["Typed API layer"]
@@ -178,29 +189,47 @@ src/
 | `/` | Workspace — drop a file, recent calls, recommendations |
 | `/upload` | Full ingest form (file or HTTPS URL) |
 | `/calls/:id/processing` | Live processing timeline |
-| `/calls/:id/*` | Call workspace (`overview`, `outline`, `transcript`, `insights`, `info`) |
+| `/calls/:id/*` | Call workspace (`verdict`, `record`, `act`, `brief`) |
+| `/deals/:id` | Deal timeline across calls |
+| `/integrations` | HubSpot + Slack, evidence-gated CRM send |
 | `/search` | Cross-call search |
 | `/shared/:token` | Read-only shared report |
 | `/demo` | Deep-link into the demo call |
 
 ## Docker
 
-The image is a Vite build served by nginx. `/api/` is proxied to an `api` upstream (Deal Truth on port 8000).
+The image is a Vite build served by nginx. At runtime nginx proxies `/api/` to `API_UPSTREAM` (or `VITE_API_BASE_URL` from `.env` if `API_UPSTREAM` is unset) and `/integrations-api/` to `INTEGRATION_UPSTREAM`. It listens on `$PORT` (default **10000**).
 
 ```bash
-docker build \
-  --build-arg VITE_API_BASE_URL= \
-  --build-arg VITE_USE_MOCKS=false \
-  -t opengong-web .
+npm run docker:up
 ```
 
-`VITE_*` values are baked in at **build** time. Do not pass API keys as build args; inject them at runtime only if the host supports it, or keep the UI behind the same origin as the API.
+App: http://localhost:10000 — stop with Ctrl+C, or `npm run docker:down`.
+
+Do not pass API keys as Docker build args. For the container, set `API_KEY` (or `VITE_API_KEY` in `.env`); nginx adds `X-API-Key` on proxied requests.
+
+## Deploy on Render
+
+Create a **Web Service** with **Docker** runtime (not Node). Health check path: `/healthz`.
+
+| Env var | Required | Value |
+| --- | --- | --- |
+| `API_UPSTREAM` | Yes (to reach the API) | API origin, e.g. `https://deal-truth-api.onrender.com` |
+| `API_BASE_URL` | No | Leave empty so the browser uses same-origin `/api/` |
+| `API_KEY` | If the API requires it | Set in the Render dashboard only |
+| `INTEGRATION_UPSTREAM` | To proxy `/integrations-api/` | Integration service origin, e.g. `http://host.docker.internal:4001` |
+| `INTEGRATION_API_BASE_URL` | No | Leave empty so the browser uses same-origin `/integrations-api/`. Set only if the browser should call the integration origin directly. |
+| `INTEGRATION_API_TOKEN` | If the integration API requires it | Set in the Render dashboard only. nginx sends `Authorization: Bearer`. |
+
+Leave `VITE_*` unset on Render. The image bakes mocks off and empty API URL; nginx + `config.js` pick up runtime env.
+
+Point the service at a branch that includes this Dockerfile (the default `main` branch still has `proxy_pass http://api:8000`, which is the crash `host not found in upstream "api"`).
 
 ## Tech stack
 
 React 18 · TypeScript · Vite 7 · Tailwind CSS · TanStack Query · React Router 7 · Zod · Recharts · MSW · Vitest · Playwright · Lucide
 
-The visual language is paper (`#f3efe8`), ink, and violet — Plus Jakarta Sans for UI, IBM Plex Mono for timestamps and IDs.
+The visual language is Tiranga: saffron for attention, green for proven, chakra navy for the instrument — Instrument Serif for verdicts, Plus Jakarta Sans for UI, JetBrains Mono for quotes and timestamps.
 
 ## Contributing
 
@@ -211,4 +240,4 @@ The visual language is paper (`#f3efe8`), ink, and violet — Plus Jakarta Sans 
 
 ## License
 
-[MIT](LICENSE) © 2026 OpenGong contributors
+[MIT](LICENSE) © 2026 Deal Truth contributors

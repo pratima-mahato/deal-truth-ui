@@ -1,9 +1,8 @@
-import { ArrowRight } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Drawer } from "@/components/ui/Drawer";
 import { formatClock } from "@/lib/utils";
 import { useEvidenceFocus } from "@/components/evidence/EvidenceFocusContext";
+import { ArrowGlyph } from "@/components/brand/ChakraMark";
+import { Chip } from "@/components/ui/Badge";
 
 export function InsightDrawer({
   onJumpToTranscript,
@@ -22,51 +21,49 @@ export function InsightDrawer({
       onClose={clearFocus}
       footer={
         drawer && focus && focus.segmentIds.length > 0 ? (
-          <Button
-            className="w-full"
+          <button
+            type="button"
+            className="btn primary"
+            style={{ width: "100%", justifyContent: "center" }}
             onClick={() => {
               setFocus({ ...focus, play: true });
               onJumpToTranscript();
             }}
           >
-            Jump to transcript
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+            Play it in the transcript <ArrowGlyph />
+          </button>
         ) : null
       }
     >
       {drawer ? (
-        <div className="space-y-5 text-sm">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="vstack" style={{ gap: 14 }}>
+          <div className="hstack" style={{ flexWrap: "wrap" }}>
             {drawer.severity ? (
-              <Badge tone={drawer.severity === "high" ? "danger" : drawer.severity === "medium" ? "warning" : "neutral"}>
-                {drawer.severity}
-              </Badge>
+              <Chip tone={drawer.severity === "high" ? "blocker" : "unproven"}>{drawer.severity}</Chip>
             ) : (
-              <Badge tone="violet">{drawer.kind}</Badge>
+              <Chip tone="brand">{drawer.kind}</Chip>
             )}
-            {drawer.evidenceStatus ? <Badge tone="positive">{drawer.evidenceStatus.replace("_", " ")}</Badge> : null}
+            {drawer.evidenceStatus ? <Chip tone="proof">{drawer.evidenceStatus.replace("_", " ")}</Chip> : null}
           </div>
           <section>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">Why this matters</h3>
-            <p className="mt-2 leading-relaxed text-ink-700">{drawer.why}</p>
+            <div className="eyebrow" style={{ marginBottom: 6 }}>Why this matters</div>
+            <p className="sub">{drawer.why}</p>
           </section>
           {drawer.quote ? (
-            <section className="rounded-xl border border-violet-100 bg-violet-50/70 p-4">
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-700">Evidence</h3>
-              <p className="mt-2 font-mono text-xs text-ink-400">
+            <div className="receipt">
+              <div className="receipt-src mono">
                 {drawer.startMs != null ? formatClock(drawer.startMs) : "—"}
                 {drawer.speakerName ? ` · ${drawer.speakerName}` : ""}
-              </p>
-              <blockquote className="mt-2 text-[15px] leading-relaxed text-ink-900">“{drawer.quote}”</blockquote>
-            </section>
+              </div>
+              <div className="receipt-q">“{drawer.quote}”</div>
+            </div>
           ) : (
-            <p className="text-ink-500">No transcript quote is attached. This finding is absence-based.</p>
+            <p className="sub">No transcript quote is attached. This finding is absence-based.</p>
           )}
           {drawer.action ? (
             <section>
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">Recommended action</h3>
-              <p className="mt-2 leading-relaxed text-ink-700">{drawer.action}</p>
+              <div className="eyebrow" style={{ marginBottom: 6 }}>Recommended action</div>
+              <p className="sub">{drawer.action}</p>
             </section>
           ) : null}
         </div>

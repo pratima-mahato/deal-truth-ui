@@ -1,3 +1,16 @@
+# Deal Truth UI — Render Blueprint
+#
+# Runtime: Docker. Do not use a Node/static site runtime — nginx must bind
+# to $PORT (Render injects it; default 10000).
+#
+# After the first deploy, set API_UPSTREAM in the dashboard to the Deal Truth
+# API origin, e.g. https://deal-truth-api.onrender.com
+# Leave API_BASE_URL empty so the browser calls same-origin /api/ (no CORS).
+#
+# If logs show: host not found in upstream "api"
+# the service is still on the old nginx.conf (Docker Compose hostname).
+# Redeploy this Dockerfile (entrypoint.sh), not a Node native build.
+
 services:
   - type: web
     name: deal-truth-ui
@@ -5,11 +18,17 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     envVars:
-      # Deal Truth API origin, e.g. https://deal-truth-api.onrender.com
-      # nginx proxies same-origin /api/ to this URL (recommended; avoids CORS).
       - key: API_UPSTREAM
         sync: false
-      # Optional. Only set this if the browser should call the API directly
-      # instead of through the nginx proxy (requires CORS on the API).
       - key: API_BASE_URL
         value: ""
+      - key: API_KEY
+        sync: false
+      - key: INTEGRATION_UPSTREAM
+        sync: false
+      - key: INTEGRATION_API_BASE_URL
+        value: ""
+      - key: INTEGRATION_API_TOKEN
+        sync: false
+      - key: UPLOAD_MAX_BODY_SIZE
+        value: 100m
