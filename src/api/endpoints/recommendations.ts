@@ -1,11 +1,12 @@
-import { recommendationsResponseSchema, type RecommendationsResponse } from "../contracts";
+import { type RecommendationsResponse } from "../contracts";
 import { apiClient } from "../client";
+import { mapRecommendations } from "../adapters";
 import { isMissingEndpoint, recommendationsFromLoadedCalls } from "./localIntelligence";
 
-/** Prompt 2 does not currently expose GET /api/v1/recommendations. 404 degrades to a derived list. */
+/** Live GET /api/v1/recommendations is snake_case. 404 degrades to a derived list. */
 export async function listRecommendations(): Promise<RecommendationsResponse> {
   try {
-    return recommendationsResponseSchema.parse(await apiClient.get("/api/v1/recommendations"));
+    return mapRecommendations(await apiClient.get("/api/v1/recommendations"));
   } catch (error) {
     if (isMissingEndpoint(error)) {
       return recommendationsFromLoadedCalls();

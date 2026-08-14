@@ -5,7 +5,10 @@ import {
   createShareLink,
   generateFollowUp,
   getCall,
+  getCallRefusals,
   getCallReport,
+  getCallsOverview,
+  getDeal,
   getTranscript,
   listCalls,
   listRecommendations,
@@ -17,6 +20,7 @@ import {
   uploadCallAudio,
   registerSourceUrl,
   getSharedReport,
+  resolveCallAudioSrc,
 } from "@/api";
 import { isTerminalStatus, type CreateCallRequest } from "@/api/contracts";
 
@@ -69,6 +73,43 @@ export function useRecommendations() {
   });
 }
 
+export function useCallsOverview() {
+  return useQuery({
+    queryKey: ["calls", "overview"],
+    queryFn: getCallsOverview,
+    retry: false,
+  });
+}
+
+export function useDeal(dealId: string) {
+  return useQuery({
+    queryKey: ["deal", dealId],
+    queryFn: () => getDeal(dealId),
+    enabled: !!dealId,
+    retry: false,
+  });
+}
+
+export function useCallRefusals(callId: string, enabled = true) {
+  return useQuery({
+    queryKey: ["refusals", callId],
+    queryFn: () => getCallRefusals(callId),
+    enabled: !!callId && enabled,
+    retry: false,
+  });
+}
+
+export function useCallAudioSrc(callId: string) {
+  const query = useQuery({
+    queryKey: ["audio-url", callId],
+    queryFn: () => resolveCallAudioSrc(callId),
+    enabled: !!callId,
+    retry: false,
+    staleTime: 60_000,
+  });
+  return query.data ?? "";
+}
+
 export function useSearch(q: string) {
   return useQuery({
     queryKey: ["search", q],
@@ -110,7 +151,7 @@ export function useSampleCall() {
     mutationFn: async () => {
       const created = await createCall({
         title: "Enterprise sales discovery (sample)",
-        customerName: "Sarah Mitchell · Acme Inc.",
+        customerName: "Sarah Mitchell · Example Inc.",
         repName: "Rahul Mehta",
         callDirection: "outbound",
         sourceType: "sample",

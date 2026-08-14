@@ -61,6 +61,7 @@ export const callSchema = z.object({
   completedAt: z.string().optional(),
   sourceType: z.enum(SOURCE_TYPES),
   biggestRisk: z.string().optional(),
+  dealId: z.string().optional(),
   signalBadges: z.array(z.string()).optional(),
   /** Eight deal-dimension pips for the workspace table. */
   signalPips: z.array(dimensionPipStateSchema).optional(),
@@ -300,6 +301,68 @@ export const callReportSchema = z.object({
   callScore: callScoreSchema.optional(),
   /** ASSUMPTION: structured outline. If omitted, UI derives from moments. */
   outline: z.array(outlineSectionSchema).optional(),
+  shippedCount: z.number().int().optional(),
+  refusedCount: z.number().int().optional(),
+});
+
+export const refusedClaimSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  claim: z.string(),
+  why: z.string(),
+  insightType: z.string().optional(),
+});
+
+export const callRefusalsSchema = z.object({
+  callId: z.string(),
+  refusedCount: z.number().int(),
+  shippedCount: z.number().int(),
+  refusals: z.array(refusedClaimSchema),
+});
+
+export const dealCallSchema = z.object({
+  callId: z.string(),
+  title: z.string(),
+  createdAt: z.string(),
+  durationMs: z.number(),
+  states: z.record(dimensionPipStateSchema),
+});
+
+export const dealDeltaSchema = z.object({
+  dimension: z.string(),
+  from: z.string(),
+  to: z.string(),
+  callId: z.string().optional(),
+  note: z.string().optional(),
+});
+
+export const dealSchema = z.object({
+  id: z.string(),
+  accountName: z.string(),
+  primaryContact: z.string().optional(),
+  repName: z.string().optional(),
+  callCount: z.number().int(),
+  spanDays: z.number(),
+  calls: z.array(dealCallSchema),
+  deltas: z.array(dealDeltaSchema),
+});
+
+export const callsOverviewSchema = z.object({
+  totalCalls: z.number().int(),
+  byStatus: z.record(z.number()),
+  shipped: z.number().int(),
+  partial: z.number().int(),
+  failed: z.number().int(),
+  cancelled: z.number().int(),
+  processing: z.number().int(),
+  totalDurationMs: z.number(),
+  insightCounts: z.record(z.number()),
+  recentCalls: z.array(callSchema),
+  refusedCount: z.number().int().optional(),
+});
+
+export const slackIntegrationStatusSchema = z.object({
+  configured: z.boolean(),
 });
 
 export const processingEventSchema = z.object({

@@ -150,7 +150,7 @@ export function DemoLayer() {
         sub: "Three calls. It lost its timeline and its next meeting, and gained a security blocker. Nobody noticed, because nobody re-read the last call.",
         go: () => {
           demoCloseCrm();
-          navigate("/deals/acme");
+          navigate("/deals/demo");
         },
         spot: ".matrix",
       },
@@ -168,11 +168,11 @@ export function DemoLayer() {
       { label: "Search every call", keys: "G S", hint: "search", run: () => navigate("/search") },
       { label: "Upload a call", keys: "", hint: "upload", run: () => navigate("/upload") },
       { label: "Processing — watch the gate", keys: "", hint: "processing", run: () => navigate(`/calls/${CALL}/processing`) },
-      { label: "Verdict — the Acme call", keys: "G C", hint: "call", run: () => goCall("verdict") },
+      { label: "Verdict — the Example call", keys: "G C", hint: "call", run: () => goCall("verdict") },
       { label: "The record — moments, sentiment, objections", keys: "", hint: "record", run: () => goCall("record") },
       { label: "What to do — battlecard, commitments, email", keys: "", hint: "act", run: () => goCall("act") },
       { label: "Manager brief", keys: "", hint: "brief", run: () => goCall("brief") },
-      { label: "Deal timeline — how Acme moved", keys: "G D", hint: "deal", run: () => navigate("/deals/acme") },
+      { label: "Deal timeline — how Example moved", keys: "G D", hint: "deal", run: () => navigate("/deals/demo") },
       { label: "Integrations — HubSpot & Slack", keys: "", hint: "integrations", run: () => navigate("/integrations") },
       { label: "Send to HubSpot — evidence-gated", keys: "", hint: "crm", run: () => { goCall("verdict"); window.setTimeout(() => demoOpenCrm(), 300); } },
       { label: "Shared report — what the customer sees", keys: "", hint: "shared", run: () => navigate("/demo") },
@@ -386,6 +386,8 @@ export function DemoLayer() {
       return { i, state, a };
     }),
   );
+
+  if (!env.useMocks) return null;
 
   return (
     <>

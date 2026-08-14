@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { formatBytes } from "@/lib/utils";
 import { LiveWaveform } from "@/components/audio/Waveform";
+import { env } from "@/config/env";
 
 const ALLOWED_EXT = /\.(mp3|wav|m4a|mp4|webm|ogg)$/i;
 const MAX_BYTES = 80 * 1024 * 1024;
@@ -73,7 +74,10 @@ export function CallDropZone({
         <LiveWaveform active={over} />
       </div>
       <div style={{ fontWeight: 700, marginBottom: 4 }}>Drop a recording, or paste a link</div>
-      <div className="tiny">mp3 · wav · m4a · webm — up to 80 MB. Five sample calls ship in the repo.</div>
+      <div className="tiny">
+        mp3 · wav · m4a · webm — up to 80 MB
+        {env.useMocks ? ". Sample calls are available in mock mode." : "."}
+      </div>
     </label>
   );
 }

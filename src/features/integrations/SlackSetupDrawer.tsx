@@ -102,9 +102,7 @@ export function SlackSetupDrawer({
         setSaveMessage("Demo mode: Slack alerts are simulated. The webhook was not stored or sent anywhere.");
       } else {
         setSaveTone("info");
-        setSaveMessage(
-          "Slack webhook setup is ready in the UI. Server-side webhook configuration is required to activate it.",
-        );
+        setSaveMessage("Webhook saved on the Deal Truth API. The URL is stored server-side and is never returned.");
       }
     } catch (error) {
       setWebhookError(error instanceof Error ? error.message : "Could not save webhook.");

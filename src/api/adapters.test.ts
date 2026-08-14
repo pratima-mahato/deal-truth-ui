@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { mapCall, mapCallList, mapEvent, mapEvidence, mapFollowUp, mapReport, mapSearchResponse, mapShareLink, mapSnapshot, mapTranscript } from "@/api/adapters";
+import { mapCall, mapCallList, mapDeal, mapEvent, mapEvidence, mapFollowUp, mapRecommendations, mapRefusals, mapReport, mapSearchResponse, mapShareLink, mapSnapshot, mapTranscript } from "@/api/adapters";
 import { toWireCall, toWireTranscript, toWireReport } from "@/mocks/toWire";
-import { buildAcmeTranscript } from "@/mocks/fixtures/acmeTranscript";
-import { acmeCall, buildAcmeReport } from "@/mocks/fixtures/acmeReport";
+import { buildDemoTranscript } from "@/mocks/fixtures/demoTranscript";
+import { demoCall, buildDemoReport } from "@/mocks/fixtures/demoReport";
 import { segmentId } from "@/lib/segmentId";
 
 describe("mapCallList", () => {
@@ -12,7 +12,7 @@ describe("mapCallList", () => {
         id: "11111111-1111-4111-8111-111111111111",
         public_call_id: "pub-1",
         title: "Discovery",
-        customer_name: "Acme",
+        customer_name: "Example",
         status: "SHIPPED",
         terminal_outcome: "SHIPPED",
         duration_ms: 120000,
@@ -21,7 +21,7 @@ describe("mapCallList", () => {
       },
     ]);
     expect(listed.total).toBe(1);
-    expect(listed.items[0]?.customerName).toBe("Acme");
+    expect(listed.items[0]?.customerName).toBe("Example");
     expect(listed.items[0]?.repName).toBe("");
     expect(listed.items[0]?.durationMs).toBe(120000);
   });
@@ -60,8 +60,8 @@ describe("mapTranscript", () => {
     expect(transcript.text).toBe("Hello there.");
   });
 
-  it("round-trips the Acme fixture through wire shape", () => {
-    const original = buildAcmeTranscript();
+  it("round-trips the demo fixture through wire shape", () => {
+    const original = buildDemoTranscript();
     const mapped = mapTranscript(toWireTranscript(original));
     expect(mapped.segments[0]?.id).toBe(original.segments[0]?.id);
     expect(mapped.segments).toHaveLength(original.segments.length);
@@ -152,7 +152,7 @@ describe("mapSnapshot", () => {
 describe("mapReport", () => {
   it("maps snake_case sections and evidence_links", () => {
     const report = mapReport({
-      call: toWireCall(acmeCall),
+      call: toWireCall(demoCall),
       summary: { headline: "H", tldr: "T", detailed: "D", decisions: [], action_items: [], next_steps: [] },
       deal_signals: [{ id: "s1", label: "Next meeting", state: "missing" }],
       customer_truth: [
@@ -196,8 +196,8 @@ describe("mapReport", () => {
     expect(report.nextCall.goal).toBe("Book security");
   });
 
-  it("round-trips the Acme report through snake_case", () => {
-    const original = buildAcmeReport();
+  it("round-trips the demo report through snake_case", () => {
+    const original = buildDemoReport();
     const mapped = mapReport(toWireReport(original));
     expect(mapped.objections.length).toBe(original.objections.length);
     expect(mapped.objections[0]?.evidence.segmentIds[0]).toBe(original.objections[0]?.evidence.segmentIds[0]);
@@ -210,7 +210,7 @@ describe("live Prompt 2 payloads", () => {
       id: "8a987e89-9466-4df9-8e1e-ea6dc2942fc6",
       public_call_id: "3ce95e93fe15",
       title: "UI integration probe",
-      customer_name: "Acme Probe",
+      customer_name: "Example Probe",
       status: "CREATED",
       terminal_outcome: null,
       duration_ms: null,
@@ -254,10 +254,10 @@ describe("live Prompt 2 payloads", () => {
   it("maps follow-up sentences without subject or ids", () => {
     const email = mapFollowUp({
       sentences: [
-        { text: "Hi Acme Probe,", evidence_segment_ids: [], supported: false, kind: "NON_FACTUAL" },
+        { text: "Hi Example Probe,", evidence_segment_ids: [], supported: false, kind: "NON_FACTUAL" },
       ],
       unsupported_claims: [],
-      body: "Hi Acme Probe,",
+      body: "Hi Example Probe,",
       polish: "fallback",
     });
     expect(email.subject).toBe("Follow-up");
@@ -316,4 +316,126 @@ describe("mapSearchResponse", () => {
     expect(mapped.groups.segments[0]?.title).toBe("Transcript match");
     expect(mapped.total).toBe(2);
   });
+
+  it("maps live grouped search with insight type and call id", () => {
+    const mapped = mapSearchResponse({
+      query: "security",
+      groups: {
+        insights: [{ id: "ins-1", type: "DEAL_RISK", title: "SOC2", summary: "review required", call_id: "c1" }],
+        segments: [],
+        calls: [{ id: "c1", title: "Discovery", customer_name: "Example Inc." }],
+      },
+      total: 2,
+    });
+    expect(mapped.groups.insights[0]?.insightType).toBe("DEAL_RISK");
+    expect(mapped.groups.calls[0]?.callId).toBe("c1");
+  });
 });
+
+describe("mapCall signal_pips object", () => {
+  it("orders live dimension keys into the eight pip slots", () => {
+    const call = mapCall({
+      id: "c1",
+      title: "Discovery",
+      customer_name: "Example",
+      status: "SHIPPED",
+      duration_ms: 1000,
+      created_at: "2026-08-11T00:00:00.000Z",
+      updated_at: "2026-08-11T00:00:00.000Z",
+      deal_id: "deal-1",
+      top_risk: "No next meeting",
+      signal_pips: {
+        pain_identified: "proven",
+        business_impact_identified: "proven",
+        decision_maker_identified: "missing",
+        economic_buyer_identified: "missing",
+        timeline_identified: "missing",
+        next_meeting_committed: "blocked",
+        competitor_active: "blocked",
+        blocker_active: "blocked",
+      },
+    });
+    expect(call.dealId).toBe("deal-1");
+    expect(call.biggestRisk).toBe("No next meeting");
+    expect(call.signalPips).toEqual(["proven", "proven", "missing", "missing", "missing", "blocked", "blocked", "blocked"]);
+  });
+});
+
+describe("mapRecommendations", () => {
+  it("accepts snake_case call_ids and unknown kind values", () => {
+    const mapped = mapRecommendations({
+      available: true,
+      items: [
+        {
+          id: "rec-1",
+          kind: "objection",
+          title: "Pricing",
+          description: "Two calls",
+          count: 2,
+          query: "pricing",
+          call_ids: ["a", "b"],
+        },
+      ],
+    });
+    expect(mapped.items[0]?.kind).toBe("aggregate_insight");
+    expect(mapped.items[0]?.callIds).toEqual(["a", "b"]);
+  });
+});
+
+describe("mapRefusals", () => {
+  it("maps live refused claims", () => {
+    const mapped = mapRefusals(
+      {
+        call_id: "c1",
+        refused_count: 1,
+        shipped_count: 23,
+        refusals: [
+          {
+            id: "r1",
+            insight_type: "CUSTOMER_FACT",
+            title: "Budget approved",
+            error_code: "EVIDENCE_UNSUPPORTED",
+            drop_reason: "Not in the transcript",
+          },
+        ],
+      },
+      "c1",
+    );
+    expect(mapped.refusedCount).toBe(1);
+    expect(mapped.refusals[0]?.code).toBe("EVIDENCE_UNSUPPORTED");
+    expect(mapped.refusals[0]?.claim).toBe("Budget approved");
+  });
+});
+
+describe("mapDeal", () => {
+  it("maps dimension_states and sorts calls by created_at", () => {
+    const deal = mapDeal({
+      id: "deal-1",
+      account_name: "Example Inc.",
+      primary_contact: "Sarah",
+      call_count: 2,
+      span_days: 8,
+      calls: [
+        {
+          call_id: "later",
+          title: "Discovery",
+          created_at: "2026-08-13T00:00:00.000Z",
+          duration_ms: 1000,
+          dimension_states: { pain_identified: "proven", next_meeting_committed: "blocked" },
+        },
+        {
+          call_id: "earlier",
+          title: "Intro",
+          created_at: "2026-08-05T00:00:00.000Z",
+          duration_ms: 800,
+          dimension_states: { pain_identified: "proven", next_meeting_committed: "proven" },
+        },
+      ],
+      deltas: [],
+    });
+    expect(deal.calls.map((call) => call.callId)).toEqual(["earlier", "later"]);
+    expect(deal.calls[1]?.states.next_meeting_committed).toBe("blocked");
+    expect(deal.accountName).toBe("Example Inc.");
+  });
+});
+

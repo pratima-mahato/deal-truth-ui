@@ -1,13 +1,13 @@
 import type { Call, CallReport, Insight } from "@/api/contracts";
-import { ACME_CALL_ID, ACME_SEGMENTS as S, buildAcmeTranscript, quoteAt } from "./acmeTranscript";
+import { DEMO_CALL_ID, DEMO_SEGMENTS as S, buildDemoTranscript, quoteAt } from "./demoTranscript";
 import { segmentId } from "@/lib/segmentId";
 
-const transcript = buildAcmeTranscript();
+const transcript = buildDemoTranscript();
 
-export const acmeCall: Call = {
-  id: ACME_CALL_ID,
+export const demoCall: Call = {
+  id: DEMO_CALL_ID,
   title: "Enterprise sales discovery",
-  customerName: "Sarah Mitchell · Acme Inc.",
+  customerName: "Sarah Mitchell · Example Inc.",
   repName: "Rahul Mehta",
   callDirection: "outbound",
   status: "SHIPPED",
@@ -18,6 +18,7 @@ export const acmeCall: Call = {
   updatedAt: "2026-08-11T15:48:00.000Z",
   completedAt: "2026-08-11T15:48:00.000Z",
   sourceType: "sample",
+  dealId: "deal-demo",
   biggestRisk: "Security review required",
   signalBadges: ["Pain identified", "Security blocker", "No next meeting"],
   signalPips: ["proven", "proven", "missing", "missing", "missing", "blocked", "blocked", "blocked"],
@@ -27,15 +28,15 @@ function ev(...ids: string[]) {
   return { segmentIds: ids };
 }
 
-export function buildAcmeReport(call: Call = acmeCall): CallReport {
-  const t = buildAcmeTranscript(call.id);
+export function buildDemoReport(call: Call = demoCall): CallReport {
+  const t = buildDemoTranscript(call.id);
   return {
     call,
     summary: {
       headline: "Strong product fit, blocked by security review and an active competitor.",
       tldr: "Sarah confirmed six hours a week of manual routing pain and Salesforce as a hard requirement. Price is nearly 2× current spend. Security must approve any vendor. No next meeting was committed.",
       detailed:
-        "Discovery with Acme operations. Sarah described a spreadsheet-based routing workflow that costs about six hours every week and drops hot leads overnight. She reacted positively to native Salesforce sync and said the team would use the product if that integration is real. Commercial friction is explicit: current vendor is about $400 versus an $800 proposal. AcmeAI is scheduled for Tuesday. Security review is mandatory. Rahul committed to SOC2 by Friday and Salesforce docs tomorrow. Sarah offered a security-lead intro next week but would not book a follow-up.",
+        "Discovery with Example operations. Sarah described a spreadsheet-based routing workflow that costs about six hours every week and drops hot leads overnight. She reacted positively to native Salesforce sync and said the team would use the product if that integration is real. Commercial friction is explicit: current vendor is about $400 versus an $800 proposal. NexusAI is scheduled for Tuesday. Security review is mandatory. Rahul committed to SOC2 by Friday and Salesforce docs tomorrow. Sarah offered a security-lead intro next week but would not book a follow-up.",
       decisions: [
         "Salesforce integration is a hard requirement.",
         "Security review is a prerequisite to onboarding.",
@@ -119,7 +120,7 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
       {
         id: "ct-comp",
         category: "competition",
-        title: "AcmeAI demo is scheduled Tuesday",
+        title: "NexusAI demo is scheduled Tuesday",
         summary: "A cheaper competitor is in active evaluation.",
         quote: quoteAt(t, S.competitor),
         speakerName: "Sarah",
@@ -163,7 +164,7 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
         id: "obj-security",
         kind: "security",
         title: "Security review is mandatory",
-        summary: "Acme cannot onboard a vendor without security sign-off.",
+        summary: "Example cannot onboard a vendor without security sign-off.",
         severity: "high",
         coaching: "Identify the security owner, send SOC2 and the data-flow diagram, and ask to schedule the technical review now.",
         evidence: ev(S.security, S.securityReview),
@@ -192,7 +193,7 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
         id: "cm-side",
         side: "seller",
         owner: "Rahul",
-        action: "Build AcmeAI side-by-side on Salesforce write-back",
+        action: "Build NexusAI side-by-side on Salesforce write-back",
         dueText: "Before Tuesday",
         status: "committed",
         evidence: ev(S.competitorConcern),
@@ -235,7 +236,7 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
       {
         id: "risk-competitor",
         title: "Competitor still active",
-        summary: "Customer is evaluating AcmeAI next week.",
+        summary: "Customer is evaluating NexusAI next week.",
         severity: "high",
         evidenceStatus: "SUPPORTED",
         evidence: ev(S.competitor),
@@ -267,8 +268,8 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
     ],
     competitors: [
       {
-        id: "comp-acmeai",
-        name: "AcmeAI",
+        id: "comp-nexusai",
+        name: "NexusAI",
         stance: "Evaluating",
         likes: ["Lower price"],
         concerns: ["Unknown Salesforce integration"],
@@ -280,7 +281,7 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
       { id: "m-pain", kind: "pain", label: "6 hrs/week quantified", startMs: 522000, evidence: ev(S.pain) },
       { id: "m-price", kind: "pricing", label: "Price ~2× current", startMs: 1274000, evidence: ev(S.pricing) },
       { id: "m-intent", kind: "buying_signal", label: "Intent, conditional", startMs: 1338000, evidence: ev(S.buyingIntent) },
-      { id: "m-comp", kind: "competitor", label: "AcmeAI demo Tuesday", startMs: 1443000, evidence: ev(S.competitor) },
+      { id: "m-comp", kind: "competitor", label: "NexusAI demo Tuesday", startMs: 1443000, evidence: ev(S.competitor) },
       { id: "m-sec", kind: "security", label: "Security review required", startMs: 1564000, evidence: ev(S.security) },
       { id: "m-over", kind: "objection", label: "Rep overstates intent", startMs: 1902000, evidence: ev(S.sellerOverstate) },
       { id: "m-next", kind: "next_step", label: "No meeting committed", startMs: 2091000, evidence: ev(S.weakNext) },
@@ -309,7 +310,7 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
       },
     ],
     nextCall: {
-      goal: "Get the security owner into the room before AcmeAI demos on Tuesday.",
+      goal: "Get the security owner into the room before NexusAI demos on Tuesday.",
       questions: [
         "Who owns the security approval, and can we get them on the next call?",
         "What is the full document list your review needs beyond SOC 2?",
@@ -323,7 +324,7 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
           evidenceSegmentIds: [S.pricing],
         },
         {
-          title: "AcmeAI is cheaper",
+          title: "NexusAI is cheaper",
           detail: "Their own doubt is Salesforce write-back. Lead the side-by-side with that, not price.",
           evidenceSegmentIds: [S.competitorConcern],
         },
@@ -332,29 +333,36 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
         "SOC 2 report (committed Friday)",
         "Salesforce integration docs (committed tomorrow)",
         "Data-flow diagram + sub-processor list",
-        "AcmeAI Salesforce write-back comparison",
+        "NexusAI Salesforce write-back comparison",
       ],
       missingFields: ["Economic buyer", "Decision maker", "Purchase timeline", "Next meeting"],
       warning: "Do not open the next call assuming a purchase window. The customer never gave one.",
     },
     managerBrief: {
-      dealLabel: "Acme Inc.",
+      dealLabel: "Example Inc.",
       whyTheyBuy:
         "Manual routing costs 6 hrs/week across two coordinators, quantified by the customer.\nSalesforce write-back is a stated non-negotiable and the incumbent does not solve it.\nProduct fit confirmed on the call, conditional on the Salesforce integration.",
       whyTheyDont: [
         "Security review is a mandatory gate with no named owner.",
         "Proposed price is roughly double current spend and was left unresolved.",
-        "AcmeAI has a live demo booked before our documents land.",
+        "NexusAI has a live demo booked before our documents land.",
       ],
       intent: "Strong product fit if Salesforce writes back correctly.",
-      competition: "AcmeAI scheduled Tuesday; cheaper, weaker Salesforce story.",
+      competition: "NexusAI scheduled Tuesday; cheaper, weaker Salesforce story.",
       biggestRisk: "No economic buyer has entered the deal, and the customer refused to book a next meeting.",
       customerCommitment: "weak",
-      nextMove: "Get the security lead into the next conversation. Send the SOC 2 pack and the AcmeAI comparison before Tuesday.",
+      nextMove: "Get the security lead into the next conversation. Send the SOC 2 pack and the NexusAI comparison before Tuesday.",
     },
     followUp: {
       subject: "SOC2, Salesforce mapping, and next steps",
       sentences: [
+        {
+          id: "fu-0",
+          text: "Hi Sarah,",
+          evidenceSegmentIds: [],
+          supported: true,
+          kind: "non_factual",
+        },
         {
           id: "fu-1",
           text: "Thanks for the discussion today.",
@@ -386,10 +394,24 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
         {
           id: "fu-5",
           text: "Looking forward to reconnecting next week.",
-          evidenceSegmentIds: [],
+          evidenceSegmentIds: [S.weakNext],
           supported: false,
           kind: "unsupported",
           explanation: "The customer did not explicitly agree to another meeting.",
+        },
+        {
+          id: "fu-6",
+          text: "Best regards,",
+          evidenceSegmentIds: [],
+          supported: true,
+          kind: "non_factual",
+        },
+        {
+          id: "fu-7",
+          text: "Rahul Mehta",
+          evidenceSegmentIds: [],
+          supported: true,
+          kind: "non_factual",
         },
       ],
     },
@@ -489,7 +511,7 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
         { term: "Salesforce", count: 6 },
         { term: "security", count: 5 },
         { term: "pricing", count: 3 },
-        { term: "AcmeAI", count: 1 },
+        { term: "NexusAI", count: 1 },
       ],
     },
     callScore: {
@@ -498,20 +520,22 @@ export function buildAcmeReport(call: Call = acmeCall): CallReport {
       summary: "Strong discovery conversation — the commercial close is still open.",
     },
     outline: [
-      { id: "o-intro", title: "Introduction", startMs: 12000, endMs: 82000, summary: "Rahul frames DealRouter for Acme operations." },
+      { id: "o-intro", title: "Introduction", startMs: 12000, endMs: 82000, summary: "Rahul frames DealRouter for Example operations." },
       { id: "o-workflow", title: "Current workflow", startMs: 82000, endMs: 190000, summary: "Inbound volume is still routed in a spreadsheet." },
       { id: "o-sf", title: "Salesforce requirement", startMs: 190000, endMs: 522000, summary: "Native Salesforce sync is a hard requirement." },
       { id: "o-pain", title: "Pain quantification", startMs: 522000, endMs: 1120000, summary: "About six hours a week are lost to manual routing." },
       { id: "o-price", title: "Pricing", startMs: 1120000, endMs: 1338000, summary: "Proposed price is nearly double current spend." },
       { id: "o-intent", title: "Product discussion", startMs: 1338000, endMs: 1443000, summary: "Sarah will move forward on product if Salesforce is real." },
-      { id: "o-comp", title: "Competition", startMs: 1443000, endMs: 1564000, summary: "AcmeAI is scheduled for Tuesday." },
+      { id: "o-comp", title: "Competition", startMs: 1443000, endMs: 1564000, summary: "NexusAI is scheduled for Tuesday." },
       { id: "o-sec", title: "Security", startMs: 1564000, endMs: 2048000, summary: "Nothing onboards without security review." },
       { id: "o-next", title: "Next steps", startMs: 2048000, endMs: 2292000, summary: "Docs are committed; a next meeting is not." },
     ],
+    shippedCount: 23,
+    refusedCount: 4,
   };
 }
 
-export function buildAcmeInsights(report: CallReport): Insight[] {
+export function buildDemoInsights(report: CallReport): Insight[] {
   return [
     ...report.customerTruth.map((item) => ({
       id: item.id,
@@ -551,4 +575,4 @@ export function buildAcmeInsights(report: CallReport): Insight[] {
   ];
 }
 
-export { transcript as acmeTranscript };
+export { transcript as demoTranscript };

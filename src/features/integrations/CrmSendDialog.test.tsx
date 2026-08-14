@@ -2,8 +2,8 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EvidenceFocusProvider } from "@/components/evidence/EvidenceFocusContext";
-import { buildAcmeReport } from "@/mocks/fixtures/acmeReport";
-import { ACME_CALL_ID, buildAcmeTranscript } from "@/mocks/fixtures/acmeTranscript";
+import { buildDemoReport } from "@/mocks/fixtures/demoReport";
+import { DEMO_CALL_ID, buildDemoTranscript } from "@/mocks/fixtures/demoTranscript";
 import { integrationApiUrl } from "@/api/hubspot/client";
 import { CrmSendDialog } from "./CrmSendDialog";
 
@@ -31,9 +31,9 @@ describe("CrmSendDialog", () => {
         <CrmSendDialog
           open
           onClose={() => undefined}
-          report={buildAcmeReport()}
-          transcript={buildAcmeTranscript()}
-          callId={ACME_CALL_ID}
+          report={buildDemoReport()}
+          transcript={buildDemoTranscript()}
+          callId={DEMO_CALL_ID}
         />
       </EvidenceFocusProvider>,
     );

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { callAudioUrl } from "@/api/endpoints/calls";
 import { isReportReadyStatus, isTerminalStatus } from "@/api/contracts";
 import { AudioPlayerProvider, useAudioPlayer } from "@/components/audio/AudioPlayerProvider";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
@@ -28,43 +27,18 @@ import { CrmSendDialog } from "@/features/integrations/CrmSendDialog";
 import { proposeIntegrations } from "@/features/integrations/proposeActions";
 import type { CallMoment, CallReport, Transcript } from "@/api/contracts";
 import { DEMO_CLOSE_CRM, DEMO_OPEN_CRM, DEMO_PLAY_SEG, DEMO_SET_VIEW, protoSegToId } from "@/features/demo/demoEvents";
-import { deriveDimensions, resolveSegment } from "@/lib/evidence";
+import { deriveDimensions } from "@/lib/evidence";
 import { PlayGlyph } from "@/components/brand/ChakraMark";
 import { StatusPill } from "@/components/ui/Badge";
 import { formatDate, formatDuration } from "@/lib/utils";
-import { useCall, useCallReport, useReanalyze, useShare, useSwapSpeakers, useTranscript } from "@/hooks/useCallApi";
+import { CONNECTION_STATE, interpretIntegrationHealth } from "@/api/hubspot";
+import { useAppIntegrations, useIntegrationHealth } from "@/hooks/useIntegrations";
+import { useCall, useCallAudioSrc, useCallReport, useReanalyze, useShare, useSwapSpeakers, useTranscript } from "@/hooks/useCallApi";
 
 const LANE_TICK_TARGET = 8;
 
-function laneTicks(report: CallReport, transcript: Transcript): CallMoment[] {
-  const extras: CallMoment[] = [];
-  const candidates: Array<{ id: string; kind: string; label: string; segmentId?: string }> = [
-    {
-      id: "m-sf",
-      kind: "requirement",
-      label: "Salesforce",
-      segmentId: report.customerTruth.find((f) => f.category === "requirement")?.evidence.segmentIds[0],
-    },
-    {
-      id: "m-soc2",
-      kind: "commitment",
-      label: "SOC2",
-      segmentId: report.commitments.find((c) => /soc2|security pack/i.test(c.action))?.evidence.segmentIds[0],
-    },
-  ];
-  for (const candidate of candidates) {
-    if (report.moments.length + extras.length >= LANE_TICK_TARGET) break;
-    const segment = candidate.segmentId ? resolveSegment(transcript, candidate.segmentId) : undefined;
-    if (!segment || !candidate.segmentId) continue;
-    extras.push({
-      id: candidate.id,
-      kind: candidate.kind,
-      label: candidate.label,
-      startMs: segment.startMs,
-      evidence: { segmentIds: [candidate.segmentId] },
-    });
-  }
-  return [...report.moments, ...extras].slice(0, LANE_TICK_TARGET);
+function laneTicks(report: CallReport): CallMoment[] {
+  return report.moments.slice(0, LANE_TICK_TARGET);
 }
 
 const VIEWS = [
@@ -93,6 +67,7 @@ export function CallDetailPage({
   const params = useParams();
   const callId = callIdProp ?? params.callId ?? "";
   const call = useCall(callId);
+  const audioSrc = useCallAudioSrc(callId);
   const ready = !!call.data && isReportReadyStatus(call.data.status);
   const report = useCallReport(callId, ready);
   const transcript = useTranscript(callId, ready);
@@ -142,7 +117,7 @@ export function CallDetailPage({
 
   return (
     <EvidenceFocusProvider>
-      <AudioPlayerProvider src={callAudioUrl(callId)} callDurationMs={call.data.durationMs}>
+      <AudioPlayerProvider src={audioSrc} callDurationMs={call.data.durationMs}>
         <CallDetailBody
           callId={callId}
           readOnly={readOnly}
@@ -179,7 +154,7 @@ function CallDetailBody({
   const view = parseView(splat?.split("/")[0] || params.get("view") || undefined);
   const annotations = useMemo(() => annotationsForReport(report), [report]);
   const tiles = useMemo(() => deriveDimensions(report), [report]);
-  const ticks = useMemo(() => laneTicks(report, transcript), [report, transcript]);
+  const ticks = useMemo(() => laneTicks(report), [report]);
 
   const onShare = useCallback(() => {
     share.mutate(undefined, {
@@ -251,10 +226,15 @@ function CallDetailBody({
             {report.call.customerName.split("·")[1]?.trim() || report.call.customerName} — {report.call.title.toLowerCase()}
           </h1>
           <div className="sub" style={{ marginTop: 3 }}>
-            {report.call.customerName} · {report.call.repName} (rep) ·{" "}
-            <Link to="/deals/acme" style={{ color: "var(--brand)", fontWeight: 700 }}>
-              see how this deal moved →
-            </Link>
+            {report.call.customerName} · {report.call.repName} (rep)
+            {report.call.dealId ? (
+              <>
+                {" · "}
+                <Link to={`/deals/${report.call.dealId}`} style={{ color: "var(--brand)", fontWeight: 700 }}>
+                  see how this deal moved →
+                </Link>
+              </>
+            ) : null}
           </div>
         </div>
         <div className="hstack" style={{ flexWrap: "wrap" }}>
@@ -484,6 +464,11 @@ function ActView({
   onCrm: () => void;
 }) {
   const proposed = proposeIntegrations(report);
+  const health = useIntegrationHealth();
+  const slackStatus = useAppIntegrations();
+  const connections = interpretIntegrationHealth(health.data);
+  const hubspotConnected = connections.hubspot === CONNECTION_STATE.CONNECTED;
+  const slackConnected = slackStatus.data?.configured === true || connections.slack === CONNECTION_STATE.CONNECTED;
   return (
     <div className="vstack" style={{ gap: 16 }}>
       <div className="card pad-lg reveal">
@@ -495,7 +480,9 @@ function ActView({
           <div style={{ border: "1px solid var(--proof-line)", background: "var(--proof-soft)", borderRadius: 12, padding: "12px 14px" }}>
             <div className="between" style={{ marginBottom: 5 }}>
               <span style={{ fontWeight: 800, fontSize: 13.5 }}>HubSpot</span>
-              <span className="chip proof">Connected</span>
+              <span className={`chip ${hubspotConnected ? "proof" : ""}`}>
+                {health.isLoading ? "Checking…" : hubspotConnected ? "Connected" : "Not configured"}
+              </span>
             </div>
             <div className="sub" style={{ fontSize: 12.5, marginBottom: 10 }}>
               {proposed.crmActions.filter((action) => action.state === "SUPPORTED").length} fields carry evidence ·{" "}
@@ -511,7 +498,9 @@ function ActView({
           <div style={{ border: "1px solid var(--proof-line)", background: "var(--proof-soft)", borderRadius: 12, padding: "12px 14px" }}>
             <div className="between" style={{ marginBottom: 5 }}>
               <span style={{ fontWeight: 800, fontSize: 13.5 }}>Slack</span>
-              <span className="chip proof">Connected</span>
+              <span className={`chip ${slackConnected ? "proof" : ""}`}>
+                {slackStatus.isLoading ? "Checking…" : slackConnected ? "Connected" : "Not configured"}
+              </span>
             </div>
             <div className="sub" style={{ fontSize: 12.5, marginBottom: 10 }}>
               {proposed.slack.value}. Alerts fire from the integration service when a deal risk, refused claim, or lost
@@ -543,7 +532,13 @@ function BriefView({
 }) {
   return (
     <div className="vstack" style={{ gap: 16 }}>
-      <ManagerBriefPanel brief={report.managerBrief} tiles={tiles} callId={callId} />
+      <ManagerBriefPanel
+        brief={report.managerBrief}
+        tiles={tiles}
+        callId={callId}
+        shippedCount={report.shippedCount}
+        refusedCount={report.refusedCount}
+      />
       <div className="card pad-lg reveal">
         <div className="h-sec" style={{ marginBottom: 11 }}>
           Deal signals at a glance

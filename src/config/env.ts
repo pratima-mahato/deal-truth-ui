@@ -1,4 +1,4 @@
-const DEFAULT_DEMO_CALL_ID = "call-acme-saas-labs";
+const DEFAULT_DEMO_CALL_ID = "call-demo";
 
 function readFlag(value: string | undefined, fallback: boolean): boolean {
   if (value == null || value === "") return fallback;

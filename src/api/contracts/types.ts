@@ -33,6 +33,13 @@ import type {
   sentimentPointSchema,
   sharedReportSchema,
   shareLinkSchema,
+  refusedClaimSchema,
+  callRefusalsSchema,
+  dealCallSchema,
+  dealDeltaSchema,
+  dealSchema,
+  callsOverviewSchema,
+  slackIntegrationStatusSchema,
   speakerSchema,
   summarySchema,
   transcriptSchema,
@@ -76,6 +83,13 @@ export type RecommendationsResponse = z.infer<typeof recommendationsResponseSche
 export type AskAnswer = z.infer<typeof askAnswerSchema>;
 export type ShareLink = z.infer<typeof shareLinkSchema>;
 export type SharedReport = z.infer<typeof sharedReportSchema>;
+export type RefusedClaim = z.infer<typeof refusedClaimSchema>;
+export type CallRefusals = z.infer<typeof callRefusalsSchema>;
+export type DealCall = z.infer<typeof dealCallSchema>;
+export type DealDelta = z.infer<typeof dealDeltaSchema>;
+export type Deal = z.infer<typeof dealSchema>;
+export type CallsOverview = z.infer<typeof callsOverviewSchema>;
+export type SlackIntegrationStatus = z.infer<typeof slackIntegrationStatusSchema>;
 
 export type CreateCallRequest = {
   title?: string;

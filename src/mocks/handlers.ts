@@ -3,9 +3,11 @@ import { mockStore } from "./store";
 import {
   toWireAsk,
   toWireCall,
+  toWireDeal,
   toWireEvents,
   toWireFollowUp,
   toWireInsights,
+  toWireRefusals,
   toWireReport,
   toWireShare,
   toWireTranscript,
@@ -32,6 +34,8 @@ function readCreateBody(body: Record<string, unknown>) {
 }
 
 export const handlers = [
+  http.get("/api/v1/calls/overview", () => HttpResponse.json(mockStore.overview())),
+
   http.get("/api/v1/calls", () => {
     return HttpResponse.json(mockStore.list().map(toWireCall));
   }),
@@ -99,6 +103,26 @@ export const handlers = [
   http.get("/api/v1/calls/:callId/events", ({ params }) => {
     try {
       return HttpResponse.json(toWireEvents(mockStore.events(String(params.callId))));
+    } catch {
+      return notFound();
+    }
+  }),
+
+  http.get("/api/v1/calls/:callId/refusals", ({ params }) => {
+    try {
+      return HttpResponse.json(toWireRefusals(mockStore.refusals(String(params.callId))));
+    } catch {
+      return notFound();
+    }
+  }),
+
+  http.get("/api/v1/calls/:callId/audio-url", ({ params }) => {
+    try {
+      mockStore.get(String(params.callId));
+      return HttpResponse.json({
+        url: "/demo-audio.wav",
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      });
     } catch {
       return notFound();
     }
@@ -278,6 +302,20 @@ export const handlers = [
   }),
 
   http.get("/api/v1/recommendations", () => HttpResponse.json(mockStore.recommendations())),
+
+  http.get("/api/v1/deals/:dealId", ({ params }) => {
+    try {
+      return HttpResponse.json(toWireDeal(mockStore.deal(String(params.dealId))));
+    } catch {
+      return error(404, "NOT_FOUND", "Deal not found.");
+    }
+  }),
+
+  http.get("/api/v1/integrations", () => HttpResponse.json({ slack: { configured: true } })),
+
+  http.post("/api/v1/integrations/slack", async () => {
+    return HttpResponse.json({ slack: { configured: true } });
+  }),
 ];
 
 function healthPayload() {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { FollowUpEmail, FollowUpSentence, Transcript } from "@/api/contracts";
+import type { FollowUpEmail, Transcript } from "@/api/contracts";
 import { EvidenceStamp } from "@/components/evidence/EvidenceStamp";
 import { PlayGlyph } from "@/components/brand/ChakraMark";
 import { useEvidenceFocus } from "@/components/evidence/EvidenceFocusContext";
@@ -8,19 +8,6 @@ import { useFollowUp } from "@/hooks/useCallApi";
 import { cn } from "@/lib/utils";
 import { formatClock } from "@/lib/utils";
 import { resolveSegment } from "@/lib/evidence";
-
-const EMAIL_FRAME_OPEN: FollowUpSentence = {
-  id: "frame-open",
-  text: "Hi Sarah,",
-  evidenceSegmentIds: [],
-  supported: true,
-  kind: "non_factual",
-};
-
-const EMAIL_FRAME_CLOSE: FollowUpSentence[] = [
-  { id: "frame-best", text: "Best regards,", evidenceSegmentIds: [], supported: true, kind: "non_factual" },
-  { id: "frame-sig", text: "Rahul Mehta", evidenceSegmentIds: [], supported: true, kind: "non_factual" },
-];
 
 export function FollowUpPanel({
   callId,
@@ -38,10 +25,7 @@ export function FollowUpPanel({
   const email = mutation.data ?? initial;
   const sentences = useMemo(() => email?.sentences ?? [], [email]);
 
-  const lines = useMemo(() => {
-    if (sentences.length >= 8) return sentences;
-    return [EMAIL_FRAME_OPEN, ...sentences, ...EMAIL_FRAME_CLOSE].slice(0, 8);
-  }, [sentences]);
+  const lines = sentences;
 
   const unsupportedLeft = useMemo(
     () =>
@@ -68,13 +52,14 @@ export function FollowUpPanel({
       <div className="sub" style={{ fontSize: 12.5, marginBottom: 12 }}>
         Each factual sentence is tied to a segment. The draft cannot be sent while a sentence claims something the customer never said.
       </div>
-      {email ? <p className="tiny" style={{ marginBottom: 10 }}>Subject: {email.subject}</p> : null}
+      {email ? <p className="tiny" style={{ marginBottom: 10 }}>Subject: {email.subject}</p> : (
+        <p className="tiny" style={{ marginBottom: 10 }}>Generate a draft from this call. Factual sentences stay locked to transcript segments.</p>
+      )}
       <div className="vstack" style={{ gap: 7 }}>
         {lines.map((sentence) => {
           const gone = removed.has(sentence.id);
           const bad = sentence.kind === "unsupported" || (sentence.kind === "factual" && sentence.supported === false);
           const cls = sentence.kind === "factual" && sentence.supported ? "fact" : bad ? "bad" : "";
-          const counter = transcript?.segments.find((s) => /get back to you/i.test(s.text));
           const factSeg = transcript ? resolveSegment(transcript, sentence.evidenceSegmentIds[0]) : undefined;
           return (
             <div key={sentence.id} className={cn("emailline", cls, gone && "removed")}>
@@ -90,9 +75,9 @@ export function FollowUpPanel({
                         type="button"
                         className="btn sm play"
                     onClick={() => {
-                      const ids = counter ? [counter.id] : sentence.evidenceSegmentIds;
+                      const ids = sentence.evidenceSegmentIds;
                       setFocus({ insightId: sentence.id, segmentIds: ids, play: true });
-                      const seg = counter ?? factSeg;
+                      const seg = factSeg;
                       if (seg) void audio?.playRange(seg.startMs, seg.endMs);
                     }}
                       >

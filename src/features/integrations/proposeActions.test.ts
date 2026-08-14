@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { hubspotSyncRequestSchema } from "@/api/hubspot/types";
 import { FORBIDDEN_REQUEST_KEYS, HUBSPOT_OPERATION_TYPE, HUBSPOT_TASK_TYPE } from "@/api/hubspot/constants";
-import { buildAcmeReport } from "@/mocks/fixtures/acmeReport";
-import { buildAcmeTranscript } from "@/mocks/fixtures/acmeTranscript";
+import { buildDemoReport } from "@/mocks/fixtures/demoReport";
+import { buildDemoTranscript } from "@/mocks/fixtures/demoTranscript";
 import {
   buildDealOperation,
   dateInputToDateTime,
@@ -47,10 +47,10 @@ describe("inferTaskType", () => {
 });
 
 describe("proposeIntegrations", () => {
-  const report = buildAcmeReport();
-  const transcript = buildAcmeTranscript();
+  const report = buildDemoReport();
+  const transcript = buildDemoTranscript();
   const proposed = proposeIntegrations(report, {
-    reportUrl: "http://localhost:5173/calls/call-acme-saas-labs",
+    reportUrl: "http://localhost:5173/calls/call-demo",
     transcript,
   });
 
@@ -80,7 +80,7 @@ describe("proposeIntegrations", () => {
       .filter((action) => action.defaultSelected && action.operation)
       .map((action) => action.operation!);
     const parsed = hubspotSyncRequestSchema.parse({
-      requestId: "dealtruth_acme_test",
+      requestId: "dealtruth_demo_test",
       operations,
       slack: proposed.slack.slack,
     });
@@ -102,14 +102,14 @@ describe("buildDealOperation", () => {
   it("converts a date-only close date to a timezone datetime", () => {
     expect(dateInputToDateTime("2026-10-31")).toBe("2026-10-31T00:00:00.000Z");
     const deal = buildDealOperation({
-      name: "Acme — ops routing",
+      name: "Example — ops routing",
       pipeline: "default",
       stage: "appointmentscheduled",
       amount: 120000,
       closeDate: "2026-10-31",
     });
     expect(deal?.data).toMatchObject({
-      name: "Acme — ops routing",
+      name: "Example — ops routing",
       amount: 120000,
       closeDate: "2026-10-31T00:00:00.000Z",
     });
@@ -118,7 +118,7 @@ describe("buildDealOperation", () => {
   it("omits the deal until required fields are present", () => {
     expect(
       buildDealOperation({
-        name: "Acme",
+        name: "Example",
         pipeline: "default",
         stage: "appointmentscheduled",
         amount: Number.NaN,

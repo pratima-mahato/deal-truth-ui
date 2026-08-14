@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildAcmeReport, acmeCall } from "@/mocks/fixtures/acmeReport";
-import { buildAcmeTranscript } from "@/mocks/fixtures/acmeTranscript";
+import { buildDemoReport, demoCall } from "@/mocks/fixtures/demoReport";
+import { buildDemoTranscript } from "@/mocks/fixtures/demoTranscript";
 import {
   buildDraftFromIntelligence,
   composeOperations,
@@ -11,16 +11,16 @@ import { parseHubSpotResponse, summarizeHubSpotResponse } from "@/api/integratio
 import type { HubSpotRequest } from "@/api/integrations/contracts";
 
 describe("buildDraftFromIntelligence", () => {
-  it("maps Acme intelligence without fabricating evidence quotes", () => {
-    const report = buildAcmeReport();
-    const transcript = buildAcmeTranscript();
-    const draft = buildDraftFromIntelligence(report, transcript, "https://app.example/calls/acme/overview");
+  it("maps demo intelligence without fabricating evidence quotes", () => {
+    const report = buildDemoReport();
+    const transcript = buildDemoTranscript();
+    const draft = buildDraftFromIntelligence(report, transcript, "https://app.example/calls/demo/overview");
 
-    expect(draft.deal.name).toMatch(/Acme/i);
+    expect(draft.deal.name).toMatch(/Example/i);
     expect(draft.note.body).toContain("Salesforce");
     expect(draft.task.subject.length).toBeGreaterThan(0);
-    expect(draft.call.title).toBe(acmeCall.title);
-    expect(draft.call.durationMs).toBe(acmeCall.durationMs);
+    expect(draft.call.title).toBe(demoCall.title);
+    expect(draft.call.durationMs).toBe(demoCall.durationMs);
     expect(draft.selected.meeting).toBe(false);
     expect(draft.omissions.some((item) => /meeting/i.test(item))).toBe(true);
 
@@ -34,8 +34,8 @@ describe("buildDraftFromIntelligence", () => {
   });
 
   it("composeOperations emits unique ids and ISO timestamps", () => {
-    const report = buildAcmeReport();
-    const draft = buildDraftFromIntelligence(report, buildAcmeTranscript());
+    const report = buildDemoReport();
+    const draft = buildDraftFromIntelligence(report, buildDemoTranscript());
     draft.deal.amount = 800;
     const ops = composeOperations(draft);
     const ids = ops.map((op) => op.operationId);
@@ -71,7 +71,7 @@ describe("HubSpot response interpretation", () => {
 
 describe("mock integration scenarios", () => {
   const baseOps: HubSpotRequest["operations"] = [
-    { operationId: "deal-1", type: "CREATE_DEAL", data: { name: "Acme", pipeline: "default", stage: "appointmentscheduled", amount: 1, closeDate: "2026-10-31T00:00:00.000Z" } },
+    { operationId: "deal-1", type: "CREATE_DEAL", data: { name: "Example", pipeline: "default", stage: "appointmentscheduled", amount: 1, closeDate: "2026-10-31T00:00:00.000Z" } },
     { operationId: "note-1", type: "CREATE_NOTE", data: { body: "Summary" } },
     { operationId: "task-1", type: "CREATE_TASK", data: { taskType: "TODO", dueAt: "2026-08-20T00:00:00.000Z", subject: "Follow up" } },
   ];

@@ -41,9 +41,6 @@ const ADVERSE_DIMENSIONS = new Set<DimensionId>(["competitor_active", "blocker_a
 
 const SILENCE_GAP_MS = 2000;
 
-export const GATE_CLAIMS_SHIPPED = 23;
-export const GATE_CLAIMS_REFUSED = 4;
-
 export function stampTone(status: StampStatus): "proof" | "unproven" | "absent" | "blocker" {
   if (status === "SUPPORTED") return "proof";
   if (status === "UNCONFIRMED") return "unproven";

@@ -5,14 +5,13 @@ import { PageSkeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/EmptyState";
 import { EvidenceFocusProvider } from "@/components/evidence/EvidenceFocusContext";
 import { AudioPlayerProvider } from "@/components/audio/AudioPlayerProvider";
-import { callAudioUrl } from "@/api/endpoints/calls";
-import { useSharedReport } from "@/hooks/useCallApi";
+import { useSharedReport, useCallAudioSrc } from "@/hooks/useCallApi";
 import { RealityCheckSection } from "@/features/reality-check/RealityCheckSection";
 import { ProofRing, SignalBoard } from "@/features/signals/ProofRing";
 import { EvidenceReceipt } from "@/components/evidence/EvidenceReceipt";
 import { deriveDimensions, resolveSegment } from "@/lib/evidence";
 import { env } from "@/config/env";
-import { CUSTOMER_TRUTH_CATEGORIES } from "@/api/contracts";
+import { CUSTOMER_TRUTH_CATEGORIES, type CallReport, type Transcript } from "@/api/contracts";
 
 export function SharedPage() {
   const { token = "" } = useParams();
@@ -40,7 +39,11 @@ export function SharedPage() {
     );
   }
 
-  const { report, transcript } = shared.data;
+  return <SharedReportView report={shared.data.report} transcript={shared.data.transcript} />;
+}
+
+function SharedReportView({ report, transcript }: { report: CallReport; transcript: Transcript }) {
+  const audioSrc = useCallAudioSrc(report.call.id);
   const tiles = deriveDimensions(report);
   const factsWithEvidence = CUSTOMER_TRUTH_CATEGORIES.flatMap((category) =>
     report.customerTruth.filter((fact) => fact.category === category && fact.evidence.segmentIds.length),
@@ -48,7 +51,7 @@ export function SharedPage() {
 
   return (
     <EvidenceFocusProvider>
-      <AudioPlayerProvider src={callAudioUrl(report.call.id)} callDurationMs={report.call.durationMs}>
+      <AudioPlayerProvider src={audioSrc} callDurationMs={report.call.durationMs}>
         <div className="page narrow">
           <div className="card pad-lg reveal" style={{ marginBottom: 16 }}>
             <div className="tiranga" style={{ height: 3, borderRadius: 9, overflow: "hidden", marginBottom: 16 }}>

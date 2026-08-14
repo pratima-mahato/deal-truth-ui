@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const CALL = "call-acme-saas-labs";
+const CALL = "call-demo";
 
 test("demo: open call, jump to evidence, search", async ({ page }) => {
   await page.goto("/");

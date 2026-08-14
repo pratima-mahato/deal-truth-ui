@@ -3,6 +3,8 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { applyTheme, readStoredTheme, toggleTheme } from "@/lib/theme";
 import { ChakraMark } from "@/components/brand/ChakraMark";
 import { DemoLayer } from "@/features/demo/DemoLayer";
+import { env } from "@/config/env";
+import { useCalls } from "@/hooks/useCallApi";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -23,6 +25,9 @@ export function TopNav() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const calls = useCalls();
+  const dealId = calls.data?.items.find((call) => call.dealId)?.dealId;
+  const dealHref = env.useMocks ? "/deals/demo" : dealId ? `/deals/${dealId}` : null;
 
   useEffect(() => {
     const initial = readStoredTheme();
@@ -68,9 +73,11 @@ export function TopNav() {
           <NavLink to="/upload" className={({ isActive }) => (isActive ? "navlink on" : "navlink")}>
             Upload
           </NavLink>
-          <NavLink to="/deals/acme" className={({ isActive }) => (isActive ? "navlink on" : "navlink")}>
-            Acme deal
-          </NavLink>
+          {dealHref ? (
+            <NavLink to={dealHref} className={({ isActive }) => (isActive ? "navlink on" : "navlink")}>
+              {env.useMocks ? "Example deal" : "Deal"}
+            </NavLink>
+          ) : null}
           <NavLink to="/integrations" className={({ isActive }) => (isActive ? "navlink on" : "navlink")}>
             Integrations
           </NavLink>

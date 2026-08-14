@@ -3,7 +3,10 @@ import {
   CALL_STATUSES,
   CUSTOMER_TRUTH_CATEGORIES,
   FAILURE_KINDS,
+  DEAL_DIMENSION_IDS,
+  DIMENSION_PIP_STATES,
   INSIGHT_TYPES,
+  RECOMMENDATION_KINDS,
   SEARCH_RESULT_KINDS,
   SPEAKER_ROLES,
   TERMINAL_OUTCOMES,
@@ -30,6 +33,10 @@ import {
   insightSchema,
   shareLinkSchema,
   searchResponseSchema,
+  recommendationsResponseSchema,
+  dealSchema,
+  callsOverviewSchema,
+  callRefusalsSchema,
   type AskAnswer,
   type FollowUpEmail,
   type ShareLink,
@@ -37,6 +44,13 @@ import {
   type SearchResponse,
   type SearchResult,
   type SearchResultKind,
+  type CallRefusals,
+  type CallsOverview,
+  type Deal,
+  type DealCall,
+  type RecommendationKind,
+  type RecommendationsResponse,
+  type DimensionPipState,
 } from "./contracts";
 
 type Dict = Record<string, unknown>;
@@ -128,8 +142,24 @@ function asEventState(value: unknown): ProcessingEvent["state"] {
   if (s === "succeeded" || s === "success" || s === "ok") return "succeeded";
   if (s === "failed" || s === "error" || s === "fail") return "failed";
   if (s === "skipped" || s === "skip") return "skipped";
-  if (s === "started" || s === "start" || s === "running") return "started";
+  if (s === "started" || s === "start" || s === "running" || s === "retrying") return "started";
   return "started";
+}
+
+function asPipState(value: unknown): DimensionPipState {
+  const s = str(value, "missing");
+  return (DIMENSION_PIP_STATES as readonly string[]).includes(s) ? (s as DimensionPipState) : "missing";
+}
+
+/** Live CallSummary.signal_pips is `{ pain_identified: "proven", ... }`, not an array. */
+export function mapSignalPips(raw: unknown): DimensionPipState[] | undefined {
+  if (Array.isArray(raw)) {
+    const pips = raw.map(asPipState);
+    return pips.length ? pips : undefined;
+  }
+  const obj = asRecord(raw);
+  if (!Object.keys(obj).length) return undefined;
+  return DEAL_DIMENSION_IDS.map((id) => asPipState(obj[id]));
 }
 
 export function mapEvidence(raw: unknown): EvidenceRef {
@@ -152,7 +182,16 @@ export function mapEvidence(raw: unknown): EvidenceRef {
     };
   }
   if (Array.isArray(raw)) {
-    return { segmentIds: raw.map((id) => str(id)).filter(Boolean) };
+    return {
+      segmentIds: raw
+        .map((item) => {
+          if (item && typeof item === "object") {
+            return str(pick(asRecord(item), "segment_id", "segmentId", "transcript_segment_id", "id"));
+          }
+          return str(item);
+        })
+        .filter(Boolean),
+    };
   }
   return { segmentIds: [] };
 }
@@ -182,16 +221,10 @@ export function mapCall(raw: unknown): Call {
     updatedAt: str(pick(obj, "updated_at", "updatedAt")),
     completedAt: str(pick(obj, "completed_at", "completedAt")) || undefined,
     sourceType: asSourceType(pick(obj, "source_type", "sourceType")),
-    biggestRisk: str(pick(obj, "biggest_risk", "biggestRisk")) || undefined,
+    biggestRisk: str(pick(obj, "biggest_risk", "biggestRisk", "top_risk", "topRisk")) || undefined,
+    dealId: str(pick(obj, "deal_id", "dealId")) || undefined,
     signalBadges: asArray(pick(obj, "signal_badges", "signalBadges")).map((item) => str(item)),
-    signalPips: (() => {
-      const pips = asArray(pick(obj, "signal_pips", "signalPips"))
-        .map((item) => str(item))
-        .filter((item): item is "proven" | "blocked" | "weak" | "missing" =>
-          item === "proven" || item === "blocked" || item === "weak" || item === "missing",
-        );
-      return pips.length ? pips : undefined;
-    })(),
+    signalPips: mapSignalPips(pick(obj, "signal_pips", "signalPips")),
   };
   return callSchema.parse(mapped);
 }
@@ -594,6 +627,8 @@ export function mapReport(raw: unknown): CallReport {
   if (!Object.keys(metricsRaw).length) unavailable.push("metrics");
 
   const listedUnavailable = mapStringList(pick(obj, "unavailable_sections", "unavailableSections"));
+  const shippedCountRaw = pick(obj, "shipped_count", "shippedCount");
+  const refusedCountRaw = pick(obj, "refused_count", "refusedCount");
   const scoreRaw = asRecord(pick(obj, "call_score", "callScore"));
   const callScore = Object.keys(scoreRaw).length
     ? {
@@ -631,6 +666,8 @@ export function mapReport(raw: unknown): CallReport {
     metrics,
     callScore,
     outline: outline.length ? outline : undefined,
+    shippedCount: shippedCountRaw == null ? undefined : num(shippedCountRaw),
+    refusedCount: refusedCountRaw == null ? undefined : num(refusedCountRaw),
     unavailableSections: [...new Set([...listedUnavailable, ...unavailable])],
   });
   if (parsed.success) return parsed.data;
@@ -763,9 +800,20 @@ function asSearchKind(value: unknown, fallback: SearchResultKind): SearchResultK
 export function mapSearchResult(raw: unknown, fallbackKind: SearchResultKind = "segment"): SearchResult {
   const obj = asRecord(raw);
   const callTitle =
-    str(pick(obj, "call_title", "callTitle", "customer_name", "customerName", "call_name", "callName")) || "Call";
+    str(
+      pick(
+        obj,
+        "call_title",
+        "callTitle",
+        fallbackKind === "call" ? "title" : "call_name",
+        "customer_name",
+        "customerName",
+        "call_name",
+        "callName",
+      ),
+    ) || "Call";
   const snippet = str(pick(obj, "snippet", "text", "summary", "body"));
-  const callId = str(pick(obj, "call_id", "callId"));
+  const callId = str(pick(obj, "call_id", "callId", fallbackKind === "call" ? "id" : ""));
   const startMsRaw = pick(obj, "start_ms", "startMs");
   const startMs = startMsRaw == null ? undefined : num(startMsRaw);
   const explicitTitle = str(pick(obj, "title"));
@@ -793,7 +841,7 @@ export function mapSearchResult(raw: unknown, fallbackKind: SearchResultKind = "
     title,
     snippet,
     insightType: (() => {
-      const type = str(pick(obj, "insight_type", "insightType"));
+      const type = str(pick(obj, "insight_type", "insightType", "type"));
       return (INSIGHT_TYPES as readonly string[]).includes(type) ? (type as SearchResult["insightType"]) : undefined;
     })(),
     evidence,
@@ -837,4 +885,125 @@ export function mapSearchResponse(raw: unknown, query = ""): SearchResponse {
   };
   const parsed = searchResponseSchema.safeParse(mapped);
   return parsed.success ? parsed.data : mapped;
+}
+
+export function mapRecommendations(raw: unknown): RecommendationsResponse {
+  const obj = asRecord(raw);
+  const items = asArray(pick(obj, "items")).map((item) => {
+    const row = asRecord(item);
+    const kindRaw = str(pick(row, "kind"), "aggregate_insight");
+    const kind = (RECOMMENDATION_KINDS as readonly string[]).includes(kindRaw)
+      ? (kindRaw as RecommendationKind)
+      : "aggregate_insight";
+    return {
+      id: str(pick(row, "id")),
+      kind,
+      title: str(pick(row, "title")),
+      description: str(pick(row, "description", "title")),
+      count: num(pick(row, "count")),
+      query: str(pick(row, "query")),
+      callIds: asArray(pick(row, "callIds", "call_ids")).map((id) => str(id)).filter(Boolean),
+    };
+  });
+  return recommendationsResponseSchema.parse({
+    available: Boolean(pick(obj, "available") ?? true),
+    items,
+  });
+}
+
+export function mapRefusals(raw: unknown, callId = ""): CallRefusals {
+  const obj = asRecord(raw);
+  const refusals = asArray(pick(obj, "refusals", "items")).map((item) => {
+    const row = asRecord(item);
+    return {
+      id: str(pick(row, "id")),
+      code: str(pick(row, "error_code", "errorCode", "code"), "EVIDENCE_UNSUPPORTED"),
+      claim: str(pick(row, "title", "claim", "summary")),
+      why: str(pick(row, "drop_reason", "dropReason", "why", "reason", "summary")),
+      insightType: str(pick(row, "insight_type", "insightType")) || undefined,
+    };
+  });
+  return callRefusalsSchema.parse({
+    callId: str(pick(obj, "call_id", "callId"), callId),
+    refusedCount: num(pick(obj, "refused_count", "refusedCount"), refusals.length),
+    shippedCount: num(pick(obj, "shipped_count", "shippedCount")),
+    refusals,
+  });
+}
+
+export function mapDeal(raw: unknown): Deal {
+  const obj = asRecord(raw);
+  const calls: DealCall[] = asArray(pick(obj, "calls")).map((item) => {
+    const row = asRecord(item);
+    const statesRaw = asRecord(pick(row, "dimension_states", "dimensionStates", "states"));
+    const states: DealCall["states"] = {};
+    for (const id of DEAL_DIMENSION_IDS) {
+      states[id] = asPipState(statesRaw[id]);
+    }
+    return {
+      callId: str(pick(row, "call_id", "callId", "id")),
+      title: str(pick(row, "title")),
+      createdAt: str(pick(row, "created_at", "createdAt")),
+      durationMs: num(pick(row, "duration_ms", "durationMs")),
+      states,
+    };
+  });
+  calls.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const deltas = asArray(pick(obj, "deltas")).map((item) => {
+    const row = asRecord(item);
+    return {
+      dimension: str(pick(row, "dimension", "dimension_id", "dimensionId")),
+      from: str(pick(row, "from", "was", "previous")),
+      to: str(pick(row, "to", "now", "current")),
+      callId: str(pick(row, "call_id", "callId")) || undefined,
+      note: str(pick(row, "note", "reason", "summary")) || undefined,
+    };
+  });
+  return dealSchema.parse({
+    id: str(pick(obj, "id")),
+    accountName: str(pick(obj, "account_name", "accountName")),
+    primaryContact: str(pick(obj, "primary_contact", "primaryContact")) || undefined,
+    repName: str(pick(obj, "rep_name", "repName")) || undefined,
+    callCount: num(pick(obj, "call_count", "callCount"), calls.length),
+    spanDays: num(pick(obj, "span_days", "spanDays")),
+    calls,
+    deltas,
+  });
+}
+
+export function mapCallsOverview(raw: unknown): CallsOverview {
+  const obj = asRecord(raw);
+  const byStatusRaw = asRecord(pick(obj, "by_status", "byStatus"));
+  const byStatus: Record<string, number> = {};
+  for (const [key, value] of Object.entries(byStatusRaw)) {
+    byStatus[key] = num(value);
+  }
+  const insightRaw = asRecord(pick(obj, "insight_counts", "insightCounts"));
+  const insightCounts: Record<string, number> = {};
+  for (const [key, value] of Object.entries(insightRaw)) {
+    insightCounts[key] = num(value);
+  }
+  const recentCalls = asArray(pick(obj, "recent_calls", "recentCalls")).map(mapCall);
+  return callsOverviewSchema.parse({
+    totalCalls: num(pick(obj, "total_calls", "totalCalls"), recentCalls.length),
+    byStatus,
+    shipped: num(pick(obj, "shipped")),
+    partial: num(pick(obj, "partial")),
+    failed: num(pick(obj, "failed")),
+    cancelled: num(pick(obj, "cancelled")),
+    processing: num(pick(obj, "processing")),
+    totalDurationMs: num(pick(obj, "total_duration_ms", "totalDurationMs")),
+    insightCounts,
+    recentCalls,
+    refusedCount: num(pick(obj, "refused_count", "refusedCount")),
+  });
+}
+
+export function mapAudioUrl(raw: unknown): string {
+  const obj = asRecord(raw);
+  return str(pick(obj, "url"));
+}
+
+export function insightCountTotal(counts: Record<string, number>): number {
+  return Object.values(counts).reduce((sum, value) => sum + value, 0);
 }
