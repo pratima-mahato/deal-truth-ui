@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { env } from "@/config/env";
+import { isReportReadyStatus } from "@/api/contracts";
+import { useCallRefusals, useCallReport, useCalls } from "@/hooks/useCallApi";
+import { deriveDimensions, type DimensionState } from "@/lib/evidence";
 import { toggleTheme } from "@/lib/theme";
-import { demoCloseCrm, demoOpenCrm, demoPlaySeg, demoSetView } from "./demoEvents";
+import { buildDemoBeats } from "./buildDemoBeats";
+import { demoOpenCrm } from "./demoEvents";
+import { pickDemoCall } from "./resolveDemoTarget";
 
-const CALL = env.demoCallId;
-const BEAT_COUNT = 13;
 const SPOT_SETTLE_MS = 520;
 const DEFAULT_BEAT_DELAY_MS = 420;
 const AUTO_HOLD_MS = 7000;
 const COLD_R = 66;
-const COLD_STATES = ["proven", "proven", "missing", "missing", "missing", "blocked", "blocked", "blocked"] as const;
-const COLD_COLOUR: Record<(typeof COLD_STATES)[number], string> = {
+const COLD_COLOUR: Record<DimensionState, string> = {
   proven: "var(--green-500)",
   blocked: "var(--red-500)",
+  weak: "var(--unproven)",
   missing: "var(--ink-300)",
 };
 
@@ -54,7 +56,12 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 export function DemoLayer() {
   const navigate = useNavigate();
-  const [cold, setCold] = useState(() => typeof navigator === "undefined" || !navigator.webdriver);
+  const calls = useCalls();
+  const demoCall = pickDemoCall(calls.data?.items ?? []);
+  const reportReady = !!demoCall && isReportReadyStatus(demoCall.status);
+  const report = useCallReport(demoCall?.id ?? "", reportReady);
+  const refusals = useCallRefusals(demoCall?.id ?? "", reportReady);
+  const [cold, setCold] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const [beatIndex, setBeatIndex] = useState(0);
   const [auto, setAuto] = useState(false);
@@ -72,118 +79,68 @@ export function DemoLayer() {
 
   const goCall = useCallback(
     (view?: string) => {
-      navigate(`/calls/${CALL}/${view ?? "verdict"}`);
+      if (!demoCall) return;
+      navigate(`/calls/${demoCall.id}/${view ?? "verdict"}`);
     },
-    [navigate],
+    [demoCall, navigate],
   );
 
-  const beats: Beat[] = [
-      {
-        cap: "Deal Truth does this without a $1,400 seat.",
-        sub: "Six calls, analysed. Every claim in here is backed by audio you can play.",
-        go: () => navigate("/"),
-        spot: ".rows",
-      },
-      {
-        cap: "Drop a call. Watch the gate work.",
-        sub: "Not a progress bar — a live log of every claim being checked against the transcript.",
-        go: () => navigate(`/calls/${CALL}/processing`),
-        spot: "#gatelog",
-        wait: 7200,
-      },
-      {
-        cap: "Four claims never made it out.",
-        sub: "The model wanted to ship them. The evidence gate refused all four, and kept the reason.",
-        go: () => {},
-        spot: "#gatelog",
-      },
-      {
-        cap: "Here is the deal, in one sentence.",
-        sub: "Strong product fit — blocked by a security review, a live competitor, and a meeting the customer refused to book.",
-        go: () => goCall("verdict"),
-        spot: "#mainView .card",
-      },
-      {
-        cap: "Eight dimensions. Two proven. No invented score.",
-        sub: "Every other tool invents a close score. We show you what was actually said, and what was never mentioned.",
-        go: () => demoSetView("verdict"),
-        spot: ".ring-wrap",
-      },
-      {
-        cap: "“But AI summaries hallucinate.”",
-        sub: "Click any claim in this product and you hear the customer say it. Press Next — the audio plays.",
-        go: () => {},
-        spot: "#mainView .receipt",
-      },
-      {
-        cap: "That is her voice, not our summary.",
-        sub: "Six hours a week, quantified by the customer, unprompted. The transcript scrolled to it and the waveform marked it.",
-        go: () => demoPlaySeg("sg14"),
-        spot: ".seg.focus",
-      },
-      {
-        cap: "Now the part that sells the product.",
-        sub: "The rep left this call believing it closes this month. Here is what the customer actually said, 23 seconds later.",
-        go: () => {},
-        spot: ".reality",
-      },
-      {
-        cap: "Rep: “ready to purchase this month.”",
-        sub: "Customer: “we still need to evaluate two other vendors, and security has to sign off.” Both playable. Both timestamped.",
-        go: () => demoPlaySeg("sg42"),
-        spot: ".reality",
-      },
-      {
-        cap: "The follow-up email refuses to send.",
-        sub: "One sentence claims a meeting the customer never agreed to. The gate locks the button until it is removed.",
-        go: () => demoSetView("act"),
-        spot: ".emailline.bad",
-      },
-      {
-        cap: "The same gate runs on your CRM.",
-        sub: "Seven fields carry a quote. Three we refuse to guess. One is blocked — writing a meeting nobody agreed to would create a commitment that does not exist.",
-        go: () => demoOpenCrm(),
-        spot: "#crmModal",
-      },
-      {
-        cap: "This deal peaked eight days ago.",
-        sub: "Three calls. It lost its timeline and its next meeting, and gained a security blocker. Nobody noticed, because nobody re-read the last call.",
-        go: () => {
-          demoCloseCrm();
-          navigate("/deals/demo");
-        },
-        spot: ".matrix",
-      },
-      {
-        cap: "Deal Truth. Open source. Runs on PyAI.",
-        sub: "Notes with receipts, a gate that blocks, and a deal timeline made of things people actually said. git clone and it runs.",
-        go: () => navigate("/demo"),
-        spot: null,
-      },
-  ];
+  const beats: Beat[] = buildDemoBeats({
+    callCount: calls.data?.items.length ?? 0,
+    call: demoCall,
+    report: report.data,
+    refusals: refusals.data,
+    navigate,
+  });
+
+  const dealHref = demoCall?.dealId ? `/deals/${demoCall.dealId}` : null;
+  const firstEvidence =
+    report.data?.customerTruth.find((fact) => fact.evidence.segmentIds[0])?.evidence.segmentIds[0] ??
+    report.data?.realityChecks[0]?.customerEvidence.segmentIds[0];
 
   const commands: Cmd[] = useMemo(
-    () => [
-      { label: "Workspace — all calls", keys: "G W", hint: "workspace", run: () => navigate("/") },
-      { label: "Search every call", keys: "G S", hint: "search", run: () => navigate("/search") },
-      { label: "Upload a call", keys: "", hint: "upload", run: () => navigate("/upload") },
-      { label: "Processing — watch the gate", keys: "", hint: "processing", run: () => navigate(`/calls/${CALL}/processing`) },
-      { label: "Verdict — the Example call", keys: "G C", hint: "call", run: () => goCall("verdict") },
-      { label: "The record — moments, sentiment, objections", keys: "", hint: "record", run: () => goCall("record") },
-      { label: "What to do — battlecard, commitments, email", keys: "", hint: "act", run: () => goCall("act") },
-      { label: "Manager brief", keys: "", hint: "brief", run: () => goCall("brief") },
-      { label: "Deal timeline — how Example moved", keys: "G D", hint: "deal", run: () => navigate("/deals/demo") },
-      { label: "Integrations — HubSpot & Slack", keys: "", hint: "integrations", run: () => navigate("/integrations") },
-      { label: "Send to HubSpot — evidence-gated", keys: "", hint: "crm", run: () => { goCall("verdict"); window.setTimeout(() => demoOpenCrm(), 300); } },
-      { label: "Shared report — what the customer sees", keys: "", hint: "shared", run: () => navigate("/demo") },
-      { label: "▶ Run the 90-second presentation", keys: "P", hint: "present demo", run: () => startPresentationRef.current() },
-      { label: "Toggle light / dark", keys: "D", hint: "theme", run: () => toggleTheme() },
-      { label: "Hear: “6 hours every week” — the pain", keys: "", hint: "pain evidence", run: () => { goCall("verdict"); window.setTimeout(() => demoPlaySeg("sg14"), 400); } },
-      { label: "Hear: “almost double” — the pricing objection", keys: "", hint: "price evidence", run: () => { goCall("verdict"); window.setTimeout(() => demoPlaySeg("sg24"), 400); } },
-      { label: "Hear: “security has to sign off” — the blocker", keys: "", hint: "security evidence", run: () => { goCall("verdict"); window.setTimeout(() => demoPlaySeg("sg42"), 400); } },
-      { label: "Hear: “send me something” — the refused meeting", keys: "", hint: "meeting evidence", run: () => { goCall("verdict"); window.setTimeout(() => demoPlaySeg("sg46"), 400); } },
-    ],
-    [goCall, navigate],
+    () =>
+      [
+        { label: "Workspace — all calls", keys: "G W", hint: "workspace", run: () => navigate("/") },
+        { label: "Search every call", keys: "G S", hint: "search", run: () => navigate("/search") },
+        { label: "Upload a call", keys: "", hint: "upload", run: () => navigate("/upload") },
+        demoCall
+          ? { label: "Processing — watch the gate", keys: "", hint: "processing", run: () => navigate(`/calls/${demoCall.id}/processing`) }
+          : null,
+        demoCall ? { label: "Verdict", keys: "G C", hint: "call", run: () => goCall("verdict") } : null,
+        demoCall ? { label: "The record", keys: "", hint: "record", run: () => goCall("record") } : null,
+        demoCall ? { label: "What to do", keys: "", hint: "act", run: () => goCall("act") } : null,
+        demoCall ? { label: "Manager brief", keys: "", hint: "brief", run: () => goCall("brief") } : null,
+        dealHref ? { label: "Deal timeline", keys: "G D", hint: "deal", run: () => navigate(dealHref) } : null,
+        { label: "Integrations — HubSpot & Slack", keys: "", hint: "integrations", run: () => navigate("/integrations") },
+        demoCall
+          ? {
+              label: "Send to HubSpot — evidence-gated",
+              keys: "",
+              hint: "crm",
+              run: () => {
+                goCall("verdict");
+                window.setTimeout(() => demoOpenCrm(), 300);
+              },
+            }
+          : null,
+        { label: "▶ Run the presentation", keys: "P", hint: "present demo", run: () => startPresentationRef.current() },
+        { label: "Toggle light / dark", keys: "D", hint: "theme", run: () => toggleTheme() },
+        firstEvidence
+          ? {
+              label: "Play first evidenced moment",
+              keys: "",
+              hint: "evidence",
+              run: () => {
+                goCall("verdict");
+                window.setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("dt:play-seg", { detail: firstEvidence }));
+                }, 400);
+              },
+            }
+          : null,
+      ].filter((row): row is Cmd => row != null),
+    [dealHref, demoCall, firstEvidence, goCall, navigate],
   );
 
   const cmdRows = useMemo(() => {
@@ -274,6 +231,11 @@ export function DemoLayer() {
   }
 
   function startPresentation() {
+    if (!calls.data?.items.length) {
+      showToast("Upload a call first. The demo uses API records, not a built-in sample.");
+      navigate("/upload");
+      return;
+    }
     setCold(false);
     presentingRef.current = true;
     autoRef.current = false;
@@ -379,15 +341,16 @@ export function DemoLayer() {
     document.documentElement.classList.remove("presenting");
   }, []);
 
-  const spokes = COLD_STATES.flatMap((state, si) =>
+  const ringStates: DimensionState[] = report.data
+    ? deriveDimensions(report.data).map((tile) => tile.state)
+    : Array.from({ length: 8 }, () => "missing" as const);
+  const spokes = ringStates.flatMap((state, si) =>
     Array.from({ length: 3 }, (_, k) => {
       const i = si * 3 + k;
       const a = ((i * 15 - 90) * Math.PI) / 180;
       return { i, state, a };
     }),
   );
-
-  if (!env.useMocks) return null;
 
   return (
     <>
@@ -446,7 +409,7 @@ export function DemoLayer() {
         <div className="stage-in">
           <div className="stage-card">
             <div className="stage-n">
-              {String(beatIndex + 1).padStart(2, "0")} / {BEAT_COUNT}
+              {String(beatIndex + 1).padStart(2, "0")} / {beats.length}
             </div>
             <div className="stage-txt">
               <div className="stage-cap">{highlightBrand(beats[beatIndex]?.cap ?? "")}</div>
@@ -483,7 +446,7 @@ export function DemoLayer() {
             </div>
           </div>
           <div className="stage-bar">
-            <i id="stageBar" style={{ width: `${((beatIndex + 1) / BEAT_COUNT) * 100}%` }} />
+            <i id="stageBar" style={{ width: `${((beatIndex + 1) / Math.max(beats.length, 1)) * 100}%` }} />
           </div>
         </div>
       </div>

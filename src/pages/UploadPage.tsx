@@ -167,7 +167,7 @@ export function UploadPage() {
                 className="inp"
                 value={customerName}
                 onChange={(event) => setCustomerName(event.target.value)}
-                placeholder="Sarah Mitchell · Example Inc."
+                placeholder="Customer name"
               />
             </label>
             <label className="field" htmlFor="rep-name">
@@ -177,7 +177,7 @@ export function UploadPage() {
                 className="inp"
                 value={repName}
                 onChange={(event) => setRepName(event.target.value)}
-                placeholder="Rahul Mehta"
+                placeholder="Rep name"
               />
             </label>
             <label className="field" htmlFor="tracked-competitors">

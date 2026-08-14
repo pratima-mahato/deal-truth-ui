@@ -132,7 +132,10 @@ export function SearchPage() {
       ) : search.isLoading ? (
         <PageSkeleton />
       ) : unavailable ? (
-        <EmptyState title="Search is not available on this API yet" description="Falling back to client-side search failed." />
+        <EmptyState
+          title="Search is not available on this API yet"
+          description="GET /api/v1/search is not implemented. The UI will not invent results."
+        />
       ) : search.isError ? (
         <ErrorState title="Search failed" description={search.error instanceof Error ? search.error.message : "Try again."} onRetry={() => void search.refetch()} />
       ) : search.data && search.data.total === 0 ? (

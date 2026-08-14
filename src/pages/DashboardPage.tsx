@@ -39,7 +39,7 @@ export function DashboardPage() {
       ? `/calls/${featured.id}/verdict`
       : `/calls/${featured.id}/processing`
     : "/upload";
-  const featuredDealHref = featured?.dealId ? `/deals/${featured.dealId}` : env.useMocks ? "/deals/demo" : "/";
+  const featuredDealHref = featured?.dealId ? `/deals/${featured.dealId}` : "/";
   const shippedClaims = overview.data ? insightCountTotal(overview.data.insightCounts) : 0;
   const recItems = recs.data?.items ?? [];
 
@@ -49,8 +49,6 @@ export function DashboardPage() {
     upload.mutate(
       {
         title,
-        customerName: "New contact",
-        repName: "You",
         callDirection: "outbound",
         sourceType: "upload",
         file,
@@ -184,13 +182,17 @@ export function DashboardPage() {
           <div className="eyebrow" style={{ marginBottom: 8 }}>
             Across your calls this week
           </div>
-          {(recItems.length ? recItems : []).slice(0, 4).map((item) => (
+          {recItems.slice(0, 4).map((item) => (
             <Link key={item.id} to={`/search?q=${encodeURIComponent(item.query)}`} className="between" style={{ padding: "8px 0" }}>
               <span style={{ fontSize: 13 }}>{item.description || item.title}</span>
               <ArrowGlyph />
             </Link>
           ))}
-          {!recs.isLoading && recItems.length === 0 ? (
+          {!recs.isLoading && recs.data?.available === false ? (
+            <div className="sub" style={{ fontSize: 12.5 }}>
+              Cross-call recommendations are not available on this API yet.
+            </div>
+          ) : !recs.isLoading && recItems.length === 0 ? (
             <div className="sub" style={{ fontSize: 12.5 }}>
               No cross-call patterns yet. They appear after shipped reports have objections, risks, or competitors.
             </div>
@@ -203,14 +205,14 @@ export function DashboardPage() {
           <div className="split">
             <div>
               <div className="big-num" style={{ fontSize: 48, color: "var(--proof)" }}>
-                {shippedClaims}
+                {overview.isError ? "—" : shippedClaims}
               </div>
               <div className="tiny">claims shipped with proof</div>
               <span className="chip proof" style={{ marginTop: 8 }}>PROVEN</span>
             </div>
             <div>
               <div className="big-num" style={{ fontSize: 48, color: "var(--blocker)" }}>
-                {overview.data?.refusedCount ?? 0}
+                {overview.isError || overview.data?.refusedCount == null ? "—" : overview.data.refusedCount}
               </div>
               <div className="tiny">claims refused</div>
               <span className="chip blocker" style={{ marginTop: 8 }}>NOT FOUND</span>

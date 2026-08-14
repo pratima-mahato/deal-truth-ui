@@ -93,7 +93,7 @@ export function SentimentChart({
         <div style={{ marginTop: 12 }}>
           <p className="sub" style={{ fontSize: 12.5, marginBottom: 8 }}>
             <b>
-              Emotion: {diverge.emotions[0] || diverge.label}. Buying intent: positive.
+              Emotion: {diverge.emotions[0] || diverge.label}. Buying intent valence: {intentFor(diverge).toFixed(2)}.
             </b>{" "}
             Frustration aimed at the status quo is a buying signal, not a negative one. A single blended sentiment score
             would have read this backwards. {formatClock(diverge.startMs)}.

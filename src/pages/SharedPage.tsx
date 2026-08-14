@@ -2,15 +2,15 @@ import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { CallDetailPage } from "./CallDetailPage";
 import { PageSkeleton } from "@/components/ui/Skeleton";
-import { ErrorState } from "@/components/ui/EmptyState";
+import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { EvidenceFocusProvider } from "@/components/evidence/EvidenceFocusContext";
 import { AudioPlayerProvider } from "@/components/audio/AudioPlayerProvider";
-import { useSharedReport, useCallAudioSrc } from "@/hooks/useCallApi";
+import { useSharedReport, useCallAudioSrc, useCalls } from "@/hooks/useCallApi";
 import { RealityCheckSection } from "@/features/reality-check/RealityCheckSection";
 import { ProofRing, SignalBoard } from "@/features/signals/ProofRing";
 import { EvidenceReceipt } from "@/components/evidence/EvidenceReceipt";
 import { deriveDimensions, resolveSegment } from "@/lib/evidence";
-import { env } from "@/config/env";
+import { pickDemoCall } from "@/features/demo/resolveDemoTarget";
 import { CUSTOMER_TRUTH_CATEGORIES, type CallReport, type Transcript } from "@/api/contracts";
 
 export function SharedPage() {
@@ -114,13 +114,25 @@ function SharedReportView({ report, transcript }: { report: CallReport; transcri
 }
 
 export function DemoPage() {
-  if (!env.useMocks) {
+  const calls = useCalls();
+  if (calls.isLoading) return <PageSkeleton />;
+  if (calls.isError) {
     return (
       <ErrorState
-        title="Demo fixture is mock-only"
-        description="The flagship sample lives in MSW. Upload a recording on the workspace to analyze a real call against Prompt 2."
+        title="Could not load demo call"
+        description="The demo screen reads GET /api/v1/calls. Check that the API is reachable."
+        onRetry={() => void calls.refetch()}
       />
     );
   }
-  return <CallDetailPage callId={env.demoCallId} />;
+  const call = pickDemoCall(calls.data?.items ?? []);
+  if (!call) {
+    return (
+      <EmptyState
+        title="No calls in the API yet"
+        description="The demo does not ship a built-in record. Upload a recording, wait for the report, then open Demo again."
+      />
+    );
+  }
+  return <CallDetailPage callId={call.id} />;
 }

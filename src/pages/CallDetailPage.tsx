@@ -189,7 +189,8 @@ function CallDetailBody({
     function onPlay(event: Event) {
       const proto = (event as CustomEvent<string>).detail;
       if (!proto) return;
-      setFocus({ segmentIds: [protoSegToId(proto)], play: true });
+      const segmentId = /^sg\d+$/i.test(proto) ? protoSegToId(proto) : proto;
+      setFocus({ segmentIds: [segmentId], play: true });
     }
     function onCrm() {
       setCrmOpen(true);

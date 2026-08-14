@@ -150,9 +150,7 @@ export function useSampleCall() {
   return useMutation({
     mutationFn: async () => {
       const created = await createCall({
-        title: "Enterprise sales discovery (sample)",
-        customerName: "Sarah Mitchell · Example Inc.",
-        repName: "Rahul Mehta",
+        title: "Sample call",
         callDirection: "outbound",
         sourceType: "sample",
       });
