@@ -66,7 +66,7 @@
     "signalTiles": 8,
     "realityChecks": 2,
     "proofRing": 1,
-    "transcriptSegments": 37,
+    "transcriptSegments": 52,
     "evidencePlayButtons": 12,
     "waveBars": 150,
     "momentTicks": 8
@@ -96,7 +96,7 @@
     "receipts": 4,
     "stamps": 4,
     "chips": 18,
-    "transcriptSegments": 37,
+    "transcriptSegments": 52,
     "evidencePlayButtons": 12,
     "waveBars": 150,
     "momentTicks": 8
@@ -127,7 +127,7 @@
     "cards": 6,
     "stamps": 1,
     "chips": 20,
-    "transcriptSegments": 37,
+    "transcriptSegments": 52,
     "evidencePlayButtons": 13,
     "emailLines": 8,
     "waveBars": 150,
@@ -158,7 +158,7 @@
     "cards": 5,
     "chips": 11,
     "signalTiles": 8,
-    "transcriptSegments": 37,
+    "transcriptSegments": 52,
     "waveBars": 150,
     "momentTicks": 8
    },
