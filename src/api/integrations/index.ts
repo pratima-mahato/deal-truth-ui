@@ -22,7 +22,7 @@ export const integrationApi = {
     if (env.useMockIntegrations) {
       return mockExecuteHubSpot(request);
     }
-    const raw = await integrationHttp.post<unknown>("/v1/hubspot", request);
+    const raw = await integrationHttp.post<unknown>("/v1/sync", request);
     return parseHubSpotResponse(raw);
   },
 

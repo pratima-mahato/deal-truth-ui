@@ -116,7 +116,7 @@ Copy [`.env.example`](.env.example). Values are read at build time (`VITE_*`).
 | `VITE_USE_MOCKS` | `true` / `false`. Defaults to **on** when no API URL is set. |
 | `VITE_DEMO_CALL_ID` | Call opened by `/demo` (default `call-acme-saas-labs`). |
 | `VITE_API_KEY` | Optional. Sent as `X-API-Key`. Never commit a real key. |
-| `VITE_INTEGRATION_API_BASE_URL` | HubSpot/Slack integration service origin. Browser calls `{origin}/v1/hubspot`. Empty → same-origin `/integrations-api` proxy. |
+| `VITE_INTEGRATION_API_BASE_URL` | HubSpot/Slack integration service origin. Browser calls `{origin}/v1/sync` and `{origin}/v1/health`. Empty → same-origin `/integrations-api` proxy. |
 | `VITE_INTEGRATION_API_TOKEN` | Integration API token, sent as `Authorization: Bearer`. Visible in the Vite bundle — use `INTEGRATION_API_TOKEN` on Docker/Render instead. |
 | `VITE_USE_MOCK_INTEGRATIONS` | `true` / `false`. Defaults to **on** when no integration origin is set. Independent of `VITE_USE_MOCKS`. |
 | `VITE_NGROK_SKIP_BROWSER_WARNING` | Set when the API is reached through ngrok. |

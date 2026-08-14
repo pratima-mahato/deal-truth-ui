@@ -17,10 +17,10 @@ describe("readHttpOrigin", () => {
 });
 
 describe("integrationApiUrl", () => {
-  it("joins /v1/hubspot onto the configured origin or the local proxy prefix", () => {
-    const url = integrationApiUrl("/v1/hubspot");
-    expect(url.endsWith("/v1/hubspot")).toBe(true);
+  it("joins /v1/sync onto the configured origin or the local proxy prefix", () => {
+    const url = integrationApiUrl("/v1/sync");
+    expect(url.endsWith("/v1/sync")).toBe(true);
     expect(url.startsWith("https://") || url.startsWith("http://") || url.startsWith("/integrations-api")).toBe(true);
-    expect(integrationApiUrl("/health").endsWith("/health")).toBe(true);
+    expect(integrationApiUrl("/v1/health").endsWith("/v1/health")).toBe(true);
   });
 });

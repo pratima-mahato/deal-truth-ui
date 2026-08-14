@@ -13,7 +13,7 @@ export function validateSlackWebhook(url: string): string | null {
 
 /**
  * Future backend hook. The current integration API has no webhook-save endpoint.
- * The URL is never logged, stored in web storage, or sent to POST /v1/hubspot.
+ * The URL is never logged, stored in web storage, or sent to POST /v1/sync.
  */
 export async function saveSlackWebhook(url: string): Promise<{ status: "unsupported" } | { status: "demo" }> {
   const error = validateSlackWebhook(url);

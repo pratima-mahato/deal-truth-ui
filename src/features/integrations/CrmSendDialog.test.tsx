@@ -47,7 +47,7 @@ describe("CrmSendDialog", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(integrationApiUrl("/v1/hubspot"));
+    expect(url).toBe(integrationApiUrl("/v1/sync"));
     const headers = new Headers(init.headers);
     expect(headers.get("Content-Type")).toBe("application/json");
     expect(headers.get("X-API-Key")).toBeNull();
@@ -56,9 +56,14 @@ describe("CrmSendDialog", () => {
       expect(authorization.startsWith("Bearer ")).toBe(true);
     }
     const body = JSON.parse(String(init.body)) as {
-      operations: Array<{ type: string }>;
-      slack: { enabled: boolean; title: string };
+      requestId: string;
+      operations: Array<{ operationId: string; type: string; data: Record<string, unknown> }>;
+      slack: { enabled: boolean; title: string; type: string };
     };
+    expect(body.requestId).toBeTruthy();
+    expect(body.operations.every((operation) => operation.operationId && operation.data && typeof operation.data === "object")).toBe(true);
+    expect(body.operations[0]?.type).toBe("CREATE_NOTE");
+    expect(String(body.operations[0]?.data.body)).toMatch(/DealTruth summary/i);
     expect(body.operations.map((operation) => operation.type)).toEqual([
       "CREATE_NOTE",
       "CREATE_TASK",
@@ -68,7 +73,7 @@ describe("CrmSendDialog", () => {
     ]);
     expect(body.slack.enabled).toBe(true);
     expect(body.slack.title).toBeTruthy();
-    expect(JSON.stringify(body)).not.toMatch(/hooks\.slack\.com|privateApp|x-api-key|Bearer /i);
+    expect(JSON.stringify(body)).not.toMatch(/hooks\.slack\.com|privateApp|x-api-key|Bearer |HUBSPOT_ACCESS_TOKEN|SLACK_WEBHOOK/i);
     expect(await screen.findByText(/HubSpot success/i)).toBeInTheDocument();
   });
 });

@@ -542,6 +542,39 @@ html.presenting .rail{max-height:calc(100vh - 240px)}
 /* ============================================================
    TYPE + MISC POLISH
    ============================================================ */
+/* ---------- integrations — connected status ---------- */
+.int-card{position:relative;overflow:hidden;transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+.int-card::after{content:"";position:absolute;inset:auto -40px -60px auto;width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--proof) 18%,transparent),transparent 68%);pointer-events:none}
+.int-card.on{border-color:var(--proof-line);background:linear-gradient(180deg,var(--proof-soft),var(--surface) 46%)}
+.int-card.wait{border-color:var(--brand-line);background:linear-gradient(180deg,var(--brand-soft),var(--surface) 46%)}
+.int-card.down{border-color:var(--unproven-line);background:linear-gradient(180deg,var(--unproven-soft),var(--surface) 46%)}
+.int-card.down::after{background:radial-gradient(circle,color-mix(in srgb,var(--unproven) 16%,transparent),transparent 68%)}
+.int-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift)}
+.int-name{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+.int-mark{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--surface);
+  border:1px solid var(--line);box-shadow:var(--shadow-card);flex:0 0 auto;overflow:hidden;padding:0}
+.int-logo{width:100%;height:100%;object-fit:cover;display:block}
+.int-pulse{width:7px;height:7px;border-radius:99px;flex:0 0 auto;background:var(--proof);
+  box-shadow:0 0 0 0 color-mix(in srgb,var(--proof) 50%,transparent);animation:intPulse 1.8s ease-out infinite}
+.int-pulse.wait{background:var(--brand);animation:intPulseWait 1.2s ease-in-out infinite;box-shadow:none}
+.int-pulse.off{background:var(--unproven);animation:none;box-shadow:none}
+@keyframes intPulse{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--proof) 45%,transparent)}
+  70%{box-shadow:0 0 0 8px transparent}
+  100%{box-shadow:0 0 0 0 transparent}
+}
+@keyframes intPulseWait{0%,100%{opacity:.35}50%{opacity:1}}
+.int-ready{margin-top:16px;padding:13px 14px;border-radius:12px;border:1px solid var(--proof-line);
+  background:color-mix(in srgb,var(--proof-soft) 70%,var(--surface));display:flex;align-items:center;gap:12px}
+.int-card.wait .int-ready{border-color:var(--brand-line);background:var(--brand-soft)}
+.int-card.down .int-ready{border-color:var(--unproven-line);background:var(--unproven-soft)}
+.int-caps{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding:0;list-style:none}
+.int-caps li{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;
+  font-size:11.5px;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--text-2)}
+.int-card.on .int-caps li{border-color:var(--proof-line);color:var(--proof);background:var(--surface)}
+@media(prefers-reduced-motion:reduce){.int-pulse,.int-card{animation:none;transition:none}}
+
 .hero-title{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(34px,4.6vw,52px);line-height:1.03;
   letter-spacing:-.032em}
 .mark-saffron{position:relative;white-space:nowrap}

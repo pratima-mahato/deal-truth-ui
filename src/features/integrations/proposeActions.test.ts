@@ -88,6 +88,8 @@ describe("proposeIntegrations", () => {
     expect(parsed.slack?.type).toBe("DEAL_RISK");
     expect(parsed.slack?.title).toMatch(/economic buyer|next meeting/i);
     expect(parsed.slack?.evidence?.length).toBeGreaterThan(0);
+    expect(parsed.slack?.changes?.length).toBeGreaterThan(0);
+    expect(parsed.operations[0]).toMatchObject({ type: "CREATE_NOTE", data: { body: expect.stringMatching(/DealTruth summary/i) } });
     const keys = collectKeys(parsed).map((key) => key.toLowerCase());
     for (const forbidden of FORBIDDEN_REQUEST_KEYS) {
       expect(keys).not.toContain(forbidden.toLowerCase());

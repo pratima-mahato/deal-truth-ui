@@ -46,8 +46,8 @@ export const SLACK_EVIDENCE_MAX = 2;
 export const DEFAULT_TASK_DUE_DAYS = 3;
 export const MS_PER_DAY = 86_400_000;
 
-export const HUBSPOT_HEALTH_PATH = "/health";
-export const HUBSPOT_EXECUTE_PATH = "/v1/hubspot";
+export const HUBSPOT_HEALTH_PATH = "/v1/health";
+export const HUBSPOT_EXECUTE_PATH = "/v1/sync";
 export const INTEGRATION_AUTH_HEADER = "Authorization";
 export const INTEGRATION_AUTH_SCHEME = "Bearer";
 
