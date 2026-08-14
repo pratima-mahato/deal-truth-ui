@@ -103,7 +103,7 @@ export function ProcessingPage() {
 
   return (
     <div className="page narrow">
-      <div className="between" style={{ marginBottom: 16 }}>
+      <div className="between" style={{ marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
           <div className="eyebrow" style={{ marginBottom: 5 }}>
             Processing
@@ -136,10 +136,14 @@ export function ProcessingPage() {
       ) : (
         <ProcessingTimeline status={status} failed={status === "FAILED"} logRows={logRows} />
       )}
-      <div className="between" style={{ marginTop: 12 }}>
-        <button type="button" className="btn sm" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
-          Cancel processing
-        </button>
+      <div className="between" style={{ marginTop: 12, flexWrap: "wrap" }}>
+        {isTerminalStatus(status) ? (
+          <span />
+        ) : (
+          <button type="button" className="btn sm" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
+            Cancel processing
+          </button>
+        )}
         {success ? (
           <Link to={`/calls/${callId}/verdict`} className="btn primary">
             Open the report <ArrowGlyph />

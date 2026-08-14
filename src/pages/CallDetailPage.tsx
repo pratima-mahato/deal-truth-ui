@@ -34,6 +34,9 @@ import { formatDate, formatDuration } from "@/lib/utils";
 import { CONNECTION_STATE, interpretIntegrationHealth } from "@/api/hubspot";
 import { useAppIntegrations, useIntegrationHealth } from "@/hooks/useIntegrations";
 import { useCall, useCallAudioSrc, useCallReport, useReanalyze, useShare, useSwapSpeakers, useTranscript } from "@/hooks/useCallApi";
+import { CallSummarySection } from "@/features/summary/CallSummarySection";
+import { partialReportMessage } from "@/features/summary/partialReport";
+import { env } from "@/config/env";
 
 const LANE_TICK_TARGET = 8;
 
@@ -150,6 +153,7 @@ function CallDetailBody({
   const [crmOpen, setCrmOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const unavailable = new Set(report.unavailableSections ?? []);
+  const partialBanner = partialReportMessage(unavailable, report.call.status === "PARTIAL");
   const splat = useParams()["*"];
   const view = parseView(splat?.split("/")[0] || params.get("view") || undefined);
   const annotations = useMemo(() => annotationsForReport(report), [report]);
@@ -223,11 +227,11 @@ function CallDetailBody({
             </span>
           </div>
           <h1 className="serif" style={{ fontSize: 31, letterSpacing: "-.02em", lineHeight: 1.1 }}>
-            {report.call.customerName.split("·")[1]?.trim() || report.call.customerName} — {report.call.title.toLowerCase()}
+            {report.call.title}
           </h1>
           <div className="sub" style={{ marginTop: 3 }}>
             {report.call.customerName} · {report.call.repName} (rep)
-            {report.call.dealId ? (
+            {callId === env.demoCallId && report.call.dealId ? (
               <>
                 {" · "}
                 <Link to={`/deals/${report.call.dealId}`} style={{ color: "var(--brand)", fontWeight: 700 }}>
@@ -269,17 +273,14 @@ function CallDetailBody({
         </div>
       </div>
       {shareUrl ? <p className="tiny" style={{ marginBottom: 10, color: "var(--proof)" }}>Share link copied.</p> : null}
-      {report.call.status === "PARTIAL" || unavailable.size ? (
+      {partialBanner ? (
         <div
           className="card pad"
           style={{ marginBottom: 14, borderColor: "var(--unproven-line)", background: "var(--unproven-soft)" }}
         >
           <div className="eyebrow" style={{ marginBottom: 4 }}>Partial report</div>
           <div className="sub" style={{ fontSize: 12.5 }}>
-            {unavailable.has("buyerSentiment")
-              ? "Emotion analysis is temporarily unavailable — extraction and evidence are unaffected."
-              : "Baseline summary unavailable — extraction and evidence are unaffected."}
-            {unavailable.size ? ` Degraded: ${[...unavailable].join(", ")}.` : ""}
+            {partialBanner}
           </div>
         </div>
       ) : null}
@@ -330,30 +331,6 @@ function CallDetailBody({
   );
 }
 
-function VerdictCopy({ report }: { report: CallReport }) {
-  const refusedMeeting = report.risks.some((risk) => /next meeting|next step/i.test(risk.title) && risk.evidenceStatus === "SUPPORTED");
-  const security = report.risks.some((risk) => /security/i.test(risk.title) && risk.evidenceStatus === "SUPPORTED");
-  const competitor = report.competitors.length > 0;
-  const fit = /fit|intent|pain/i.test(`${report.summary.headline} ${report.buyingIntent.summary}`);
-  if (fit && (security || competitor || refusedMeeting)) {
-    return (
-      <>
-        Strong product fit.{" "}
-        {security ? <span style={{ color: "var(--blocker)" }}>Blocked by a security review</span> : null}
-        {competitor ? ", a live competitor" : null}
-        {refusedMeeting ? (
-          <>
-            , and <span style={{ color: "var(--blocker)" }}>a next meeting the customer refused to book.</span>
-          </>
-        ) : (
-          "."
-        )}
-      </>
-    );
-  }
-  return <>{report.summary.tldr || report.summary.headline}</>;
-}
-
 function VerdictView({
   report,
   transcript,
@@ -368,27 +345,11 @@ function VerdictView({
   const { setFocus } = useEvidenceFocus();
   return (
     <div className="vstack" style={{ gap: 16 }}>
-      <div className="card pad-lg reveal">
-        <div className="eyebrow" style={{ marginBottom: 9 }}>
-          The verdict
-        </div>
-        <div className="serif" style={{ fontSize: 27, lineHeight: 1.22, letterSpacing: "-.015em", maxWidth: "34ch" }}>
-          <VerdictCopy report={report} />
-        </div>
-        <div className="hstack" style={{ marginTop: 14, flexWrap: "wrap" }}>
-          {tiles.map((tile) => (
-            <span
-              key={tile.id}
-              className={`chip ${tile.state === "proven" ? "proof" : tile.state === "missing" ? "absent" : "blocker"}`}
-            >
-              {tile.label}
-            </span>
-          ))}
-        </div>
-        <p className="invariant" style={{ marginTop: 14 }}>
-          Every line below can be played back in the customer's own voice. No close probability — only what was observed.
-        </p>
-      </div>
+      <CallSummarySection
+        summary={report.summary}
+        tiles={tiles}
+        unavailable={report.unavailableSections ?? []}
+      />
 
       <div className="card pad-lg reveal">
         <div className="hstack" style={{ gap: 26, alignItems: "center", flexWrap: "wrap" }}>

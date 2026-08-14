@@ -19,72 +19,76 @@ export function DealKillersSection({
 
   return (
     <div>
-      <div className="between" style={{ marginBottom: 10 }}>
+      <div className="between" style={{ marginBottom: 10, flexWrap: "wrap" }}>
         <span className="h-sec">Deal killers</span>
         <span className="tiny">supported first · absence is a result, not a guess</span>
       </div>
-      <div className="vstack" style={{ gap: 10 }}>
-        {ordered.map((risk) => {
-          const stamp = evidenceToStamp(risk.evidenceStatus, risk.severity === "high");
-          return (
-            <article
-              key={risk.id}
-              className="card pad reveal"
-              style={{
-                borderLeft: `3px solid var(--${risk.evidenceStatus === "SUPPORTED" ? "blocker" : "absent"})`,
-              }}
-            >
-              <div className="between" style={{ marginBottom: 6 }}>
-                <span style={{ fontWeight: 800, fontSize: 14 }}>{risk.title}</span>
-                <span className="hstack">
-                  <EvidenceStamp status={stamp} />
-                  <Chip tone={risk.severity === "high" ? "blocker" : "unproven"}>{risk.severity}</Chip>
-                </span>
-              </div>
-              <div className="sub" style={{ fontSize: 12.5 }}>
-                {risk.summary}
-              </div>
-              {risk.evidenceStatus === "ABSENCE_BASED" ? (
-                <div className="tiny" style={{ marginTop: 8, color: "var(--absent)" }}>
-                  Not a customer quote — this dimension was never identified on the call.
+      {ordered.length === 0 ? (
+        <p className="sub">No deal risks with evidence on this call.</p>
+      ) : (
+        <div className="vstack" style={{ gap: 10 }}>
+          {ordered.map((risk) => {
+            const stamp = evidenceToStamp(risk.evidenceStatus, risk.severity === "high");
+            return (
+              <article
+                key={risk.id}
+                className="card pad reveal"
+                style={{
+                  borderLeft: `3px solid var(--${risk.evidenceStatus === "SUPPORTED" ? "blocker" : "absent"})`,
+                }}
+              >
+                <div className="between" style={{ marginBottom: 6 }}>
+                  <span style={{ fontWeight: 800, fontSize: 14 }}>{risk.title}</span>
+                  <span className="hstack">
+                    <EvidenceStamp status={stamp} />
+                    <Chip tone={risk.severity === "high" ? "blocker" : "unproven"}>{risk.severity}</Chip>
+                  </span>
                 </div>
-              ) : (
-                <div className="hstack" style={{ flexWrap: "wrap", marginTop: 10 }}>
-                  <button
-                    type="button"
-                    className="btn sm play"
-                    onClick={() => setFocus({ insightId: risk.id, segmentIds: risk.evidence.segmentIds, play: true })}
-                  >
-                    <PlayGlyph />
-                    <span>Play evidence</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn sm ghost"
-                    onClick={() =>
-                      setFocus({
-                        insightId: risk.id,
-                        segmentIds: risk.evidence.segmentIds,
-                        play: false,
-                        drawer: {
-                          id: risk.id,
-                          title: risk.title,
-                          kind: "risk",
-                          severity: risk.severity,
-                          why: risk.summary,
-                          evidenceStatus: risk.evidenceStatus,
-                        },
-                      })
-                    }
-                  >
-                    Why we think this <ArrowGlyph />
-                  </button>
+                <div className="sub" style={{ fontSize: 12.5 }}>
+                  {risk.summary}
                 </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
+                {risk.evidenceStatus === "ABSENCE_BASED" ? (
+                  <div className="tiny" style={{ marginTop: 8, color: "var(--absent)" }}>
+                    Not a customer quote — this dimension was never identified on the call.
+                  </div>
+                ) : (
+                  <div className="hstack" style={{ flexWrap: "wrap", marginTop: 10 }}>
+                    <button
+                      type="button"
+                      className="btn sm play"
+                      onClick={() => setFocus({ insightId: risk.id, segmentIds: risk.evidence.segmentIds, play: true })}
+                    >
+                      <PlayGlyph />
+                      <span>Play evidence</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn sm ghost"
+                      onClick={() =>
+                        setFocus({
+                          insightId: risk.id,
+                          segmentIds: risk.evidence.segmentIds,
+                          play: false,
+                          drawer: {
+                            id: risk.id,
+                            title: risk.title,
+                            kind: "risk",
+                            severity: risk.severity,
+                            why: risk.summary,
+                            evidenceStatus: risk.evidenceStatus,
+                          },
+                        })
+                      }
+                    >
+                      Why we think this <ArrowGlyph />
+                    </button>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
