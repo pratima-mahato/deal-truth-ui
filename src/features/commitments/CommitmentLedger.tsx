@@ -1,52 +1,96 @@
-import type { Commitment } from "@/api/contracts";
-import { Card, CardHeader } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { EvidenceLink } from "@/components/evidence/EvidenceLink";
-import { Alert } from "@/components/ui/Alert";
+import type { Commitment, Transcript } from "@/api/contracts";
+import { PlayGlyph } from "@/components/brand/ChakraMark";
+import { useEvidenceFocus } from "@/components/evidence/EvidenceFocusContext";
+import { formatClock } from "@/lib/utils";
+import { resolveSegment } from "@/lib/evidence";
 
-function Column({ title, items }: { title: string; items: Commitment[] }) {
+function toneFor(status: Commitment["status"]): "proof" | "unproven" | "blocker" {
+  if (status === "committed") return "proof";
+  if (status === "not_committed") return "blocker";
+  return "unproven";
+}
+
+function labelFor(status: Commitment["status"]): string {
+  if (status === "committed") return "Committed";
+  if (status === "not_committed") return "Not committed";
+  if (status === "no_date") return "No date given";
+  return "Unconfirmed";
+}
+
+function Column({
+  title,
+  items,
+  transcript,
+}: {
+  title: string;
+  items: Commitment[];
+  transcript?: Transcript;
+}) {
+  const { setFocus } = useEvidenceFocus();
   return (
     <div>
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</h3>
-      <div className="space-y-3">
-        {items.map((item) => (
-          <article key={item.id} className="rounded-lg border border-slate-100 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium">{item.action}</p>
-              <Badge
-                tone={
-                  item.status === "committed" ? "positive" : item.status === "not_committed" ? "danger" : "warning"
-                }
-              >
-                {item.status.replace("_", " ")}
-              </Badge>
+      <div className="eyebrow" style={{ marginBottom: 9 }}>
+        {title}
+      </div>
+      <div className="vstack" style={{ gap: 8 }}>
+        {items.map((item) => {
+          const cls = toneFor(item.status);
+          const segment = transcript ? resolveSegment(transcript, item.evidence.segmentIds[0]) : undefined;
+          return (
+            <div
+              key={item.id}
+              style={{
+                border: `1px solid var(--${cls}-line)`,
+                background: `var(--${cls}-soft)`,
+                borderRadius: 11,
+                padding: "10px 12px",
+              }}
+            >
+              <div className="between" style={{ marginBottom: 4 }}>
+                <span style={{ fontWeight: 700, fontSize: 13 }}>{item.action}</span>
+                <span className={`chip ${cls}`}>{labelFor(item.status)}</span>
+              </div>
+              <div className="tiny">
+                {item.owner}
+                {item.dueText ? ` · due ${item.dueText}` : " · no date"}
+              </div>
+              {segment ? (
+                <button
+                  type="button"
+                  className="btn sm play"
+                  style={{ marginTop: 7 }}
+                  onClick={() => setFocus({ insightId: item.id, segmentIds: item.evidence.segmentIds, play: true })}
+                >
+                  <PlayGlyph />
+                  <span className="mono">{formatClock(segment.startMs)}</span>
+                </button>
+              ) : null}
             </div>
-            <p className="mt-1 text-xs text-slate-500">
-              {item.owner}
-              {item.dueText ? ` · ${item.dueText}` : ""}
-            </p>
-            {item.evidence.segmentIds.length ? <EvidenceLink evidence={item.evidence} insightId={item.id} /> : null}
-          </article>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
-export function CommitmentLedger({ commitments }: { commitments: Commitment[] }) {
-  const missingMeeting = commitments.some((c) => c.status === "not_committed");
+export function CommitmentLedger({
+  commitments,
+  transcript,
+}: {
+  commitments: Commitment[];
+  transcript?: Transcript;
+}) {
+  const missingMeeting = commitments.some((c) => c.status === "not_committed" && c.side === "customer");
   return (
-    <Card>
-      <CardHeader title="Commitment Ledger" description="Seller promises versus customer promises, each with evidence." />
-      <div className="space-y-4 p-5">
-        {missingMeeting ? (
-          <Alert tone="danger" title="Customer has not committed to a next meeting" />
-        ) : null}
-        <div className="grid gap-6 md:grid-cols-2">
-          <Column title="Your team" items={commitments.filter((c) => c.side === "seller")} />
-          <Column title="Customer" items={commitments.filter((c) => c.side === "customer")} />
-        </div>
+    <div className="card pad-lg reveal">
+      <div className="between" style={{ marginBottom: 12 }}>
+        <span className="h-sec">Commitment ledger</span>
+        {missingMeeting ? <span className="chip blocker">customer has not committed to a next meeting</span> : null}
       </div>
-    </Card>
+      <div className="split">
+        <Column title="Your team" items={commitments.filter((c) => c.side === "seller")} transcript={transcript} />
+        <Column title="The customer" items={commitments.filter((c) => c.side === "customer")} transcript={transcript} />
+      </div>
+    </div>
   );
 }

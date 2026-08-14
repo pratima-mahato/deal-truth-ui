@@ -18,7 +18,7 @@ const queryClient = new QueryClient({
 });
 
 async function bootstrap() {
-  if (env.useMocks) {
+  if (env.useMocks || env.useMockIntegrations) {
     const { enableMocks } = await import("@/mocks/enable");
     await enableMocks();
   }

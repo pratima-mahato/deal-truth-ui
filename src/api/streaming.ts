@@ -69,6 +69,17 @@ export function subscribeProcessing(
     source.onerror = () => {
       source?.close();
       source = null;
+      if (stopped) return;
+      window.setTimeout(() => {
+        if (stopped || source) return;
+        try {
+          source = new EventSource(url.toString());
+          source.onmessage = wake;
+          source.addEventListener("processing", wake);
+        } catch {
+          /* poller remains the floor */
+        }
+      }, 2000);
     };
   } catch {
     // Polling below is enough when EventSource cannot start.

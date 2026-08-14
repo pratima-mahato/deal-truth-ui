@@ -104,8 +104,8 @@ describe("follow-up", () => {
     render(wrap(<FollowUpPanel callId="call-acme-saas-labs" initial={report.followUp} />));
     expect(screen.getByText(/looking forward to reconnecting next week/i)).toBeInTheDocument();
     expect(screen.getAllByText(/unsupported/i).length).toBeGreaterThan(0);
-    await user.click(screen.getByRole("button", { name: /remove/i }));
-    expect(screen.queryByText(/looking forward to reconnecting next week/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /remove this sentence/i }));
+    expect(screen.getByRole("button", { name: /copy the draft/i })).toBeEnabled();
   });
 });
 
@@ -113,8 +113,8 @@ describe("reality check", () => {
   it("renders seller and customer sides", () => {
     const report = buildAcmeReport();
     render(wrap(<RealityCheckSection checks={report.realityChecks} />));
-    expect(screen.getAllByText(/seller implied/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/customer reality/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/the rep — implied/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/the customer — said/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/ready to purchase this month/i)).toBeInTheDocument();
   });
 });
@@ -123,8 +123,21 @@ describe("customer truth", () => {
   it("shows unconfirmed timeline without a fake quote", () => {
     const report = buildAcmeReport();
     render(wrap(<CustomerTruthSection facts={report.customerTruth} />));
-    expect(screen.getByText(/no evidence found/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/no evidence found/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/84%/)).not.toBeInTheDocument();
+  });
+});
+
+describe("deriveDimensions", () => {
+  it("maps eight observed states without collapsing intent into pain", async () => {
+    const { deriveDimensions } = await import("@/lib/evidence");
+    const tiles = deriveDimensions(buildAcmeReport());
+    expect(tiles).toHaveLength(8);
+    expect(tiles.find((t) => t.id === "pain_identified")?.state).toBe("proven");
+    expect(tiles.find((t) => t.id === "decision_maker_identified")?.state).toBe("missing");
+    expect(tiles.find((t) => t.id === "next_meeting_committed")?.value).toBe("REFUSED");
+    expect(tiles.find((t) => t.id === "competitor_active")?.state).toBe("blocked");
+    expect(tiles.find((t) => t.id === "blocker_active")?.value).toBe("SECURITY");
   });
 });
 

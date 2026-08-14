@@ -41,6 +41,8 @@ export const speakerSchema = z.object({
   manuallyOverridden: z.boolean().optional(),
 });
 
+export const dimensionPipStateSchema = z.enum(["proven", "blocked", "weak", "missing"]);
+
 export const callSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -60,6 +62,8 @@ export const callSchema = z.object({
   sourceType: z.enum(SOURCE_TYPES),
   biggestRisk: z.string().optional(),
   signalBadges: z.array(z.string()).optional(),
+  /** Eight deal-dimension pips for the workspace table. */
+  signalPips: z.array(dimensionPipStateSchema).optional(),
 });
 
 export const paginatedCallsSchema = z.object({
@@ -165,9 +169,16 @@ export const realityCheckSchema = z.object({
 export const battlecardSchema = z.object({
   goal: z.string(),
   questions: z.array(z.string()),
-  prepareFor: z.array(z.object({ title: z.string(), detail: z.string() })),
+  prepareFor: z.array(
+    z.object({
+      title: z.string(),
+      detail: z.string(),
+      evidenceSegmentIds: z.array(z.string()).optional(),
+    }),
+  ),
   doNotForget: z.array(z.string()),
   missingFields: z.array(z.string()),
+  warning: z.string().optional(),
 });
 
 export const managerBriefSchema = z.object({
@@ -202,6 +213,8 @@ export const sentimentPointSchema = z.object({
   label: z.string(),
   emotions: z.array(z.string()),
   evidence: evidenceRefSchema,
+  /** Commercial-intent axis; never merged with emotion valence. */
+  intentValence: z.number().optional(),
 });
 
 export const buyerSentimentSchema = z.object({
@@ -227,6 +240,7 @@ export const callMetricsSchema = z.object({
   }),
   questionCount: z.number(),
   keywordHits: z.array(z.object({ term: z.string(), count: z.number() })),
+  silenceGapCount: z.number().int().optional(),
 });
 
 export const summarySchema = z.object({
@@ -342,9 +356,19 @@ export const recommendationsResponseSchema = z.object({
   available: z.boolean(),
 });
 
+export const ASK_MODES = [
+  "retrieval",
+  "generated",
+  "retrieval_generation_dropped",
+  "retrieval_generation_failed",
+  "retrieval_lexical_fallback",
+  "no_index",
+] as const;
+
 export const askAnswerSchema = z.object({
   question: z.string(),
   synthesis: z.string().optional(),
+  mode: z.enum(ASK_MODES).optional(),
   moments: z.array(
     z.object({
       title: z.string(),

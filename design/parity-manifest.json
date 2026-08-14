@@ -1,0 +1,404 @@
+{
+ "generatedFrom": "deal-truth-prototype.html",
+ "screens": {
+  "workspace": {
+   "counts": {
+    "cards": 5,
+    "chips": 11
+   },
+   "headings": [
+    "DEAL TRUTH \u00b7 WORKSPACE",
+    "The call intelligence tool that shows its receipts.",
+    "Recent calls",
+    "ACROSS YOUR CALLS THIS WEEK",
+    "THE GATE, THIS WEEK"
+   ],
+   "requiredText": [
+    "PROVEN",
+    "NOT FOUND",
+    "receipt"
+   ]
+  },
+  "search": {
+   "counts": {
+    "chips": 11
+   },
+   "headings": [
+    "SEARCH EVERY CALL",
+    "Find the moment, not the document."
+   ],
+   "requiredText": []
+  },
+  "upload": {
+   "counts": {
+    "cards": 5,
+    "chips": 5
+   },
+   "headings": [
+    "NEW CALL",
+    "Give it a recording. Get back notes you can defend.",
+    "CUSTOMER",
+    "REP",
+    "TRACKED COMPETITORS",
+    "TRACKED KEYWORDS"
+   ],
+   "requiredText": []
+  },
+  "processing": {
+   "counts": {
+    "cards": 2,
+    "chips": 6,
+    "gateLogRows": 16
+   },
+   "headings": [
+    "PROCESSING",
+    "Acme Inc. \u00b7 Enterprise discovery",
+    "Gate log"
+   ],
+   "requiredText": []
+  },
+  "call:verdict": {
+   "counts": {
+    "cards": 18,
+    "receipts": 12,
+    "stamps": 26,
+    "chips": 28,
+    "signalTiles": 8,
+    "realityChecks": 2,
+    "proofRing": 1,
+    "transcriptSegments": 37,
+    "evidencePlayButtons": 12,
+    "waveBars": 150,
+    "momentTicks": 8
+   },
+   "headings": [
+    "Acme Inc. \u2014 enterprise discovery",
+    "THE VERDICT",
+    "The eight dimensions",
+    "Reality check",
+    "Customer truth",
+    "Deal killers",
+    "4 claims the model wanted to ship. The gate refused all four.",
+    "THE RECORDING",
+    "TRANSCRIPT"
+   ],
+   "requiredText": [
+    "PROVEN",
+    "NOT FOUND",
+    "BLOCKER",
+    "Reality check",
+    "no close probability"
+   ]
+  },
+  "call:moments": {
+   "counts": {
+    "cards": 8,
+    "receipts": 4,
+    "stamps": 4,
+    "chips": 18,
+    "transcriptSegments": 37,
+    "evidencePlayButtons": 12,
+    "waveBars": 150,
+    "momentTicks": 8
+   },
+   "headings": [
+    "Acme Inc. \u2014 enterprise discovery",
+    "Moments that mattered",
+    "Emotion is not buying intent",
+    "Objections, and how to handle them",
+    "NEXT TIME, SAY THIS",
+    "NEXT TIME, SAY THIS",
+    "Competitors",
+    "THEY LIKE",
+    "THEY DOUBT",
+    "Conversation metrics",
+    "TRACKED TERMS",
+    "Ask the call",
+    "THE RECORDING",
+    "TRANSCRIPT"
+   ],
+   "requiredText": [
+    "PROVEN",
+    "BLOCKER"
+   ]
+  },
+  "call:act": {
+   "counts": {
+    "cards": 6,
+    "stamps": 1,
+    "chips": 20,
+    "transcriptSegments": 37,
+    "evidencePlayButtons": 13,
+    "emailLines": 8,
+    "waveBars": 150,
+    "momentTicks": 8
+   },
+   "headings": [
+    "Acme Inc. \u2014 enterprise discovery",
+    "CRM & TEAM ACTIONS",
+    "Next call battlecard",
+    "ASK THESE",
+    "BE READY FOR",
+    "SEND BEFORE TUESDAY",
+    "STILL UNKNOWN",
+    "Commitment ledger",
+    "YOUR TEAM",
+    "THE CUSTOMER",
+    "Evidence-safe follow-up",
+    "THE RECORDING",
+    "TRANSCRIPT"
+   ],
+   "requiredText": [
+    "PROVEN",
+    "BLOCKER"
+   ]
+  },
+  "call:brief": {
+   "counts": {
+    "cards": 5,
+    "chips": 11,
+    "signalTiles": 8,
+    "transcriptSegments": 37,
+    "waveBars": 150,
+    "momentTicks": 8
+   },
+   "headings": [
+    "Acme Inc. \u2014 enterprise discovery",
+    "MANAGER BRIEF \u00b7 30 SECONDS",
+    "WHY THEY BUY",
+    "WHY THEY DON'T",
+    "BIGGEST RISK",
+    "NEXT MOVE",
+    "Deal signals at a glance",
+    "Share this report",
+    "THE RECORDING",
+    "TRANSCRIPT"
+   ],
+   "requiredText": [
+    "PROVEN",
+    "NOT FOUND",
+    "BLOCKER"
+   ]
+  },
+  "deal": {
+   "counts": {
+    "cards": 5,
+    "receipts": 4,
+    "chips": 22,
+    "evidencePlayButtons": 2,
+    "matrixCells": 24
+   },
+   "headings": [
+    "DEAL \u00b7 3 CALLS \u00b7 18 DAYS",
+    "Acme Inc.",
+    "Dimensions proven, per call",
+    "What changed, and when",
+    "Four things moved backwards since 5 August",
+    "Calls in this deal"
+   ],
+   "requiredText": [
+    "PROVEN",
+    "NOT FOUND",
+    "BLOCKER"
+   ]
+  },
+  "integrations": {
+   "counts": {
+    "cards": 4,
+    "chips": 9
+   },
+   "headings": [
+    "INTEGRATIONS",
+    "Nothing reaches your CRM without a receipt.",
+    "CRM & DEAL MANAGEMENT",
+    "TEAM ALERTS",
+    "Why this is different from every other CRM sync"
+   ],
+   "requiredText": [
+    "PROVEN",
+    "receipt"
+   ]
+  },
+  "shared": {
+   "counts": {
+    "cards": 3,
+    "receipts": 4,
+    "stamps": 5,
+    "chips": 6,
+    "signalTiles": 8,
+    "realityChecks": 1,
+    "proofRing": 1,
+    "evidencePlayButtons": 5
+   },
+   "headings": [
+    "SHARED CALL REPORT \u00b7 READ ONLY",
+    "What the customer actually said",
+    "Where this deal stands"
+   ],
+   "requiredText": [
+    "PROVEN",
+    "NOT FOUND",
+    "BLOCKER",
+    "Reality check"
+   ]
+  }
+ },
+ "tokens": {
+  "light": {
+   "--canvas": "#FBFAF8",
+   "--surface": "#FFFFFF",
+   "--surface-2": "#FAFAFC",
+   "--surface-3": "#F2F3F8",
+   "--line": "#E4E6EF",
+   "--line-strong": "#CFD3E2",
+   "--text": "#14161F",
+   "--text-2": "#4E5468",
+   "--text-3": "#8A90A6",
+   "--brand": "#0D1A80",
+   "--brand-soft": "#EEF1FF",
+   "--brand-line": "#BCC7FF",
+   "--brand-ink": "#FFFFFF",
+   "--proof": "#0F6D07",
+   "--proof-soft": "#F2FBEF",
+   "--proof-line": "#BFEBB2",
+   "--unproven": "#C2500A",
+   "--unproven-soft": "#FFF7ED",
+   "--unproven-line": "#FED7AA",
+   "--blocker": "#C42718",
+   "--blocker-soft": "#FEF2F1",
+   "--blocker-line": "#F7C7C2",
+   "--absent": "#6B7189",
+   "--absent-soft": "#F7F8FB",
+   "--absent-line": "#C4C9D8"
+  },
+  "dark": {
+   "--canvas": "#0B0C12",
+   "--surface": "#14161F",
+   "--surface-2": "#191C27",
+   "--surface-3": "#20232F",
+   "--line": "#282C3A",
+   "--line-strong": "#383D4E",
+   "--text": "#F2F3F8",
+   "--text-2": "#A9AFC4",
+   "--text-3": "#767D95",
+   "--brand": "#6B80FB",
+   "--brand-soft": "#141A3D",
+   "--brand-line": "#2C3780",
+   "--brand-ink": "#05063D",
+   "--proof": "#62C74A",
+   "--proof-soft": "#0E2010",
+   "--proof-line": "#215B19",
+   "--unproven": "#FF9933",
+   "--unproven-soft": "#2A1A08",
+   "--unproven-line": "#6E3F10",
+   "--blocker": "#F2564B",
+   "--blocker-soft": "#2A100D",
+   "--blocker-line": "#77241C",
+   "--absent": "#9298AE",
+   "--absent-soft": "#191C27",
+   "--absent-line": "#383D4E"
+  }
+ },
+ "invariants": {
+  "noCloseProbability": "UI must never render a 0-100 score or % likelihood",
+  "evidenceStates": [
+   "SUPPORTED",
+   "UNCONFIRMED",
+   "ABSENCE_BASED",
+   "BLOCKED"
+  ],
+  "dimensions": [
+   "pain_identified",
+   "business_impact_identified",
+   "decision_maker_identified",
+   "economic_buyer_identified",
+   "timeline_identified",
+   "next_meeting_committed",
+   "competitor_active",
+   "blocker_active"
+  ],
+  "customerTruthCategories": [
+   "pain",
+   "requirement",
+   "buying_signal",
+   "budget",
+   "blocker",
+   "competition",
+   "commitment",
+   "timeline"
+  ],
+  "audioSegments": [
+   "sg10",
+   "sg14",
+   "sg24",
+   "sg26",
+   "sg28",
+   "sg30",
+   "sg32",
+   "sg36",
+   "sg38",
+   "sg40",
+   "sg41",
+   "sg42",
+   "sg44",
+   "sg46",
+   "sg47"
+  ],
+  "realityCheckCodes": [
+   "OVERSTATED_INTENT",
+   "NO_EXPLICIT_COMMITMENT"
+  ],
+  "refusalCodes": [
+   "EVIDENCE_UNSUPPORTED",
+   "EVIDENCE_WRONG_SPEAKER",
+   "EVIDENCE_UNSUPPORTED",
+   "EVIDENCE_SEGMENT_MISSING"
+  ],
+  "crmFieldStates": [
+   [
+    "Deal name",
+    "SUPPORTED"
+   ],
+   [
+    "Primary contact",
+    "SUPPORTED"
+   ],
+   [
+    "Call note \u00b7 why they buy",
+    "SUPPORTED"
+   ],
+   [
+    "Call note \u00b7 blockers",
+    "SUPPORTED"
+   ],
+   [
+    "Follow-up task 1",
+    "SUPPORTED"
+   ],
+   [
+    "Follow-up task 2",
+    "SUPPORTED"
+   ],
+   [
+    "Logged call",
+    "SUPPORTED"
+   ],
+   [
+    "Deal amount",
+    "MANUAL"
+   ],
+   [
+    "Pipeline stage",
+    "MANUAL"
+   ],
+   [
+    "Close date",
+    "MANUAL"
+   ],
+   [
+    "Log completed meeting",
+    "BLOCKED"
+   ]
+  ]
+ }
+}

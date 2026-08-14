@@ -1,35 +1,48 @@
-import { cn } from "@/lib/utils";
-
 function peaksFromSeed(seed: string, count: number): number[] {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return Array.from({ length: count }, (_, i) => {
-    const n = Math.sin(hash / 1000 + i * 0.37) * 0.5 + Math.sin(i * 0.13) * 0.5;
-    return 0.18 + Math.abs(n) * 0.82;
-  });
+  let x = 7;
+  for (let i = 0; i < seed.length; i += 1) x = (x * 31 + seed.charCodeAt(i)) >>> 0;
+  const out: number[] = [];
+  for (let i = 0; i < count; i += 1) {
+    x = (x * 1103515245 + 12345) & 0x7fffffff;
+    const base = 0.34 + 0.5 * Math.abs(Math.sin(i / 5.5)) * Math.abs(Math.cos(i / 13));
+    out.push(Math.max(0.14, Math.min(1, base * (0.62 + ((x % 1000) / 1000) * 0.72))));
+  }
+  return out;
 }
+
+const WAVE_BARS = 150;
 
 export function Waveform({
   durationMs,
   currentMs,
   seed = "call",
   onSeek,
-  bars = 96,
-  className,
+  evidenceStartMs,
+  evidenceEndMs,
+  playing,
 }: {
   durationMs: number;
   currentMs: number;
   seed?: string;
   onSeek?: (ms: number) => void;
+  evidenceStartMs?: number;
+  evidenceEndMs?: number;
+  playing?: boolean;
   bars?: number;
   className?: string;
 }) {
-  const peaks = peaksFromSeed(seed, bars);
+  const peaks = peaksFromSeed(seed, WAVE_BARS);
   const progress = durationMs > 0 ? Math.min(1, currentMs / durationMs) : 0;
+  const bandLeft = durationMs > 0 && evidenceStartMs != null ? (evidenceStartMs / durationMs) * 100 : null;
+  const bandWidth =
+    durationMs > 0 && evidenceStartMs != null && evidenceEndMs != null
+      ? ((evidenceEndMs - evidenceStartMs) / durationMs) * 100
+      : null;
 
   return (
     <div
-      className={cn("flex h-12 cursor-pointer items-end gap-px", className)}
+      className={playing ? "wave tall live" : "wave tall"}
+      id="waveMain"
       role="slider"
       aria-label="Call waveform"
       aria-valuemin={0}
@@ -43,33 +56,30 @@ export function Waveform({
       }}
     >
       {peaks.map((peak, index) => {
-        const active = index / bars <= progress;
+        const active = index / WAVE_BARS <= progress;
+        const near = Math.abs(index / WAVE_BARS - progress) < 0.02;
         return (
-          <span
+          <b
             key={index}
-            className={cn("w-full rounded-sm", active ? "bg-violet-500" : "bg-violet-200")}
+            className={active ? (near ? "on near" : "on") : undefined}
             style={{ height: `${Math.round(peak * 100)}%` }}
           />
         );
       })}
+      <div className="playhead" id="playhead" style={{ left: `${progress * 100}%` }} />
+      {bandLeft != null && bandWidth != null ? (
+        <div className="evidence-band" style={{ left: `${bandLeft}%`, width: `${bandWidth}%` }} />
+      ) : null}
     </div>
   );
 }
 
 export function LiveWaveform({ active }: { active: boolean }) {
   return (
-    <div className="flex h-16 items-end justify-center gap-1" aria-hidden>
-      {Array.from({ length: 28 }, (_, i) => (
-        <span
-          key={i}
-          className={cn("w-1 rounded-full bg-violet-500", active && "animate-bar-pulse")}
-          style={{
-            height: `${20 + ((i * 13) % 70)}%`,
-            animationDelay: `${(i % 8) * 80}ms`,
-            opacity: active ? 1 : 0.35,
-          }}
-        />
+    <span className="livewave" aria-hidden>
+      {Array.from({ length: 16 }, (_, i) => (
+        <i key={i} style={{ animationDelay: `${(i * 0.07).toFixed(2)}s`, opacity: active ? 1 : 0.45 }} />
       ))}
-    </div>
+    </span>
   );
 }

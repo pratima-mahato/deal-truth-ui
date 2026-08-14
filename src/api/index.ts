@@ -8,3 +8,4 @@ export * from "./endpoints/insights";
 export * from "./endpoints/search";
 export * from "./endpoints/recommendations";
 export * from "./endpoints/share";
+export { executeHubspotSync, getHubspotHealth } from "./hubspot";

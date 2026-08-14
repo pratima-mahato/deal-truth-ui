@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { CallDetailPage } from "./CallDetailPage";
 import { PageSkeleton } from "@/components/ui/Skeleton";
@@ -6,93 +7,108 @@ import { EvidenceFocusProvider } from "@/components/evidence/EvidenceFocusContex
 import { AudioPlayerProvider } from "@/components/audio/AudioPlayerProvider";
 import { callAudioUrl } from "@/api/endpoints/calls";
 import { useSharedReport } from "@/hooks/useCallApi";
-import { DealSignalStrip } from "@/features/calls/DealSignalStrip";
-import { CustomerTruthSection } from "@/features/customer-truth/CustomerTruthSection";
-import { ObjectionsSection } from "@/features/objections/ObjectionsSection";
 import { RealityCheckSection } from "@/features/reality-check/RealityCheckSection";
-import { DealKillersSection } from "@/features/risks/DealKillersSection";
-import { CommitmentLedger } from "@/features/commitments/CommitmentLedger";
-import { BattlecardPanel } from "@/features/battlecard/BattlecardPanel";
-import { ManagerBriefPanel } from "@/features/manager-brief/ManagerBriefPanel";
-import { AudioPlayer } from "@/components/audio/AudioPlayer";
-import { TranscriptPanel } from "@/components/transcript/TranscriptPanel";
-import { Card } from "@/components/ui/Card";
-import { StatusPill } from "@/components/ui/Badge";
-import { userFacingMessage } from "@/api/errors";
-import { formatDate, formatDuration, resolveCallDurationMs } from "@/lib/utils";
+import { ProofRing, SignalBoard } from "@/features/signals/ProofRing";
+import { EvidenceReceipt } from "@/components/evidence/EvidenceReceipt";
+import { deriveDimensions, resolveSegment } from "@/lib/evidence";
+import { env } from "@/config/env";
+import { CUSTOMER_TRUTH_CATEGORIES } from "@/api/contracts";
 
 export function SharedPage() {
-  const params = useParams();
-  const token = (() => {
-    const raw = params.token ?? "";
-    try {
-      return decodeURIComponent(raw);
-    } catch {
-      return raw;
-    }
-  })();
+  const { token = "" } = useParams();
   const shared = useSharedReport(token);
+
+  useEffect(() => {
+    const wasDark = document.documentElement.classList.contains("dark");
+    document.documentElement.classList.remove("dark");
+    return () => {
+      document.documentElement.classList.toggle("dark", wasDark);
+    };
+  }, []);
 
   if (shared.isLoading) return <PageSkeleton />;
   if (shared.isError || !shared.data) {
     return (
       <ErrorState
         title="Share link invalid"
-        description={userFacingMessage(
-          shared.error,
-          "This report is missing, expired, revoked, or not ready yet.",
-        )}
+        description={
+          shared.error instanceof Error
+            ? shared.error.message
+            : "This report is missing, expired, revoked, or not ready yet."
+        }
       />
     );
   }
 
   const { report, transcript } = shared.data;
+  const tiles = deriveDimensions(report);
+  const factsWithEvidence = CUSTOMER_TRUTH_CATEGORIES.flatMap((category) =>
+    report.customerTruth.filter((fact) => fact.category === category && fact.evidence.segmentIds.length),
+  ).slice(0, 4);
 
   return (
     <EvidenceFocusProvider>
-      <AudioPlayerProvider src={callAudioUrl(report.call.id)} callDurationMs={resolveCallDurationMs(report.call.durationMs, transcript)}>
-        <div>
-          <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Shared report · read only</p>
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <h1 className="min-w-0 break-words text-xl font-semibold sm:text-2xl">{report.call.title}</h1>
-            <StatusPill status={report.call.status} />
-          </div>
-          <p className="mb-4 text-sm text-slate-500">
-            {report.call.customerName} · {formatDate(report.call.createdAt)} · {formatDuration(resolveCallDurationMs(report.call.durationMs, transcript))}
-          </p>
-          <div className="mb-5">
-            <DealSignalStrip signals={report.dealSignals} />
-          </div>
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-            <div className="space-y-5">
-              <Card className="p-5">
-                <h2 className="text-base font-semibold">Overview</h2>
-                <p className="mt-2 text-lg font-medium">{report.summary.headline}</p>
-                <p className="mt-2 text-sm text-slate-600">{report.summary.tldr}</p>
-              </Card>
-              <CustomerTruthSection facts={report.customerTruth} />
-              <ObjectionsSection objections={report.objections} />
-              <RealityCheckSection checks={report.realityChecks} />
-              <CommitmentLedger commitments={report.commitments} />
-              <DealKillersSection risks={report.risks} />
-              <BattlecardPanel card={report.nextCall} />
-              <ManagerBriefPanel brief={report.managerBrief} />
+      <AudioPlayerProvider src={callAudioUrl(report.call.id)} callDurationMs={report.call.durationMs}>
+        <div className="page narrow">
+          <div className="card pad-lg reveal" style={{ marginBottom: 16 }}>
+            <div className="tiranga" style={{ height: 3, borderRadius: 9, overflow: "hidden", marginBottom: 16 }}>
+              <i />
+              <i />
+              <i />
             </div>
-            <aside className="space-y-4 lg:sticky lg:top-20">
-              <AudioPlayer />
-              <Card className="p-4">
-                <h2 className="mb-3 text-sm font-semibold">Transcript</h2>
-                <TranscriptPanel transcript={transcript} readOnly />
-              </Card>
-            </aside>
+            <div className="between" style={{ flexWrap: "wrap", gap: 10 }}>
+              <div>
+                <div className="eyebrow" style={{ marginBottom: 6 }}>
+                  Shared call report · read only
+                </div>
+                <div className="serif" style={{ fontSize: 30, letterSpacing: "-.02em" }}>
+                  {report.call.customerName.split("·")[1]?.trim() || report.call.customerName} — {report.call.title.toLowerCase()}
+                </div>
+                <div className="sub" style={{ marginTop: 4 }}>
+                  {report.call.customerName} · {report.call.repName}
+                </div>
+              </div>
+              <ProofRing tiles={tiles} />
+            </div>
+            <p className="invariant" style={{ marginTop: 14 }}>
+              No proof in the transcript, no claim in this report.
+            </p>
+          </div>
+          <div className="card pad-lg" style={{ marginBottom: 16 }}>
+            <div className="h-sec" style={{ marginBottom: 11 }}>
+              What the customer actually said
+            </div>
+            <div className="vstack" style={{ gap: 10 }}>
+              {factsWithEvidence.map((fact) => {
+                const segment = resolveSegment(transcript, fact.evidence.segmentIds[0]);
+                return (
+                  <div key={fact.id}>
+                    <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 5 }}>
+                      {fact.category.replace("_", " ")} — {fact.title}
+                    </div>
+                    <EvidenceReceipt segment={segment} transcript={transcript} compact />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <RealityCheckSection checks={report.realityChecks.slice(0, 1)} transcript={transcript} />
+          </div>
+          <div className="card pad-lg">
+            <div className="h-sec" style={{ marginBottom: 11 }}>
+              Where this deal stands
+            </div>
+            <SignalBoard tiles={tiles} />
+            <div className="tiny" style={{ marginTop: 12 }}>
+              Generated by Deal Truth · open source · runs on PyAI
+            </div>
           </div>
         </div>
       </AudioPlayerProvider>
     </EvidenceFocusProvider>
   );
 }
-
-import { env } from "@/config/env";
 
 export function DemoPage() {
   if (!env.useMocks) {

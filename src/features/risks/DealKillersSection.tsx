@@ -1,41 +1,90 @@
-import type { DealRisk } from "@/api/contracts";
-import { Card, CardHeader } from "@/components/ui/Card";
-import { EvidenceStatusBadge, SeverityBadge } from "@/components/ui/Badge";
-import { EvidenceLink } from "@/components/evidence/EvidenceLink";
-import { cn } from "@/lib/utils";
+import type { DealRisk, Transcript } from "@/api/contracts";
+import { EvidenceStamp } from "@/components/evidence/EvidenceStamp";
+import { Chip } from "@/components/ui/Badge";
+import { PlayGlyph, ArrowGlyph } from "@/components/brand/ChakraMark";
+import { useEvidenceFocus } from "@/components/evidence/EvidenceFocusContext";
+import { evidenceToStamp } from "@/lib/evidence";
 
-export function DealKillersSection({ risks }: { risks: DealRisk[] }) {
+export function DealKillersSection({
+  risks,
+}: {
+  risks: DealRisk[];
+  transcript?: Transcript;
+}) {
+  const { setFocus } = useEvidenceFocus();
+  const ordered = [...risks].sort((a, b) => {
+    if (a.evidenceStatus === b.evidenceStatus) return 0;
+    return a.evidenceStatus === "SUPPORTED" ? -1 : 1;
+  });
+
   return (
-    <Card>
-      <CardHeader
-        title="Deal Killers"
-        description="Supported risks cite the transcript. Absence-based risks are missing signals, not invented quotes."
-      />
-      <div className="space-y-3 p-5">
-        {risks.map((risk) => (
-          <article
-            key={risk.id}
-            className={cn(
-              "rounded-lg border p-4",
-              risk.evidenceStatus === "SUPPORTED" && "border-red-200 bg-red-50/40",
-              risk.evidenceStatus === "ABSENCE_BASED" && "border-amber-200 bg-amber-50/40",
-              risk.evidenceStatus === "UNCONFIRMED" && "border-slate-200 bg-slate-50",
-            )}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-semibold">{risk.title}</h3>
-              <SeverityBadge severity={risk.severity} />
-              <EvidenceStatusBadge status={risk.evidenceStatus} />
-            </div>
-            <p className="mt-2 text-sm text-slate-700">{risk.summary}</p>
-            {risk.evidenceStatus === "ABSENCE_BASED" ? (
-              <p className="mt-2 text-xs text-amber-800">Not a customer quote — this field was never identified on the call.</p>
-            ) : (
-              <EvidenceLink evidence={risk.evidence} insightId={risk.id} />
-            )}
-          </article>
-        ))}
+    <div>
+      <div className="between" style={{ marginBottom: 10 }}>
+        <span className="h-sec">Deal killers</span>
+        <span className="tiny">supported first · absence is a result, not a guess</span>
       </div>
-    </Card>
+      <div className="vstack" style={{ gap: 10 }}>
+        {ordered.map((risk) => {
+          const stamp = evidenceToStamp(risk.evidenceStatus, risk.severity === "high");
+          return (
+            <article
+              key={risk.id}
+              className="card pad reveal"
+              style={{
+                borderLeft: `3px solid var(--${risk.evidenceStatus === "SUPPORTED" ? "blocker" : "absent"})`,
+              }}
+            >
+              <div className="between" style={{ marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 14 }}>{risk.title}</span>
+                <span className="hstack">
+                  <EvidenceStamp status={stamp} />
+                  <Chip tone={risk.severity === "high" ? "blocker" : "unproven"}>{risk.severity}</Chip>
+                </span>
+              </div>
+              <div className="sub" style={{ fontSize: 12.5 }}>
+                {risk.summary}
+              </div>
+              {risk.evidenceStatus === "ABSENCE_BASED" ? (
+                <div className="tiny" style={{ marginTop: 8, color: "var(--absent)" }}>
+                  Not a customer quote — this dimension was never identified on the call.
+                </div>
+              ) : (
+                <div className="hstack" style={{ flexWrap: "wrap", marginTop: 10 }}>
+                  <button
+                    type="button"
+                    className="btn sm play"
+                    onClick={() => setFocus({ insightId: risk.id, segmentIds: risk.evidence.segmentIds, play: true })}
+                  >
+                    <PlayGlyph />
+                    <span>Play evidence</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn sm ghost"
+                    onClick={() =>
+                      setFocus({
+                        insightId: risk.id,
+                        segmentIds: risk.evidence.segmentIds,
+                        play: false,
+                        drawer: {
+                          id: risk.id,
+                          title: risk.title,
+                          kind: "risk",
+                          severity: risk.severity,
+                          why: risk.summary,
+                          evidenceStatus: risk.evidenceStatus,
+                        },
+                      })
+                    }
+                  >
+                    Why we think this <ArrowGlyph />
+                  </button>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </div>
   );
 }

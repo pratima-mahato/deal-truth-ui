@@ -1,44 +1,118 @@
-import type { RealityCheck } from "@/api/contracts";
-import { Card, CardHeader } from "@/components/ui/Card";
-import { SeverityBadge } from "@/components/ui/Badge";
-import { EvidenceLink } from "@/components/evidence/EvidenceLink";
+import type { RealityCheck, Transcript } from "@/api/contracts";
+import { formatClock } from "@/lib/utils";
+import { EvidenceStamp } from "@/components/evidence/EvidenceStamp";
+import { PlayGlyph } from "@/components/brand/ChakraMark";
+import { useEvidenceFocus } from "@/components/evidence/EvidenceFocusContext";
+import { useAudioPlayerOptional } from "@/components/audio/AudioPlayerProvider";
+import { resolveSegment, speakerFor } from "@/lib/evidence";
 
-export function RealityCheckSection({ checks }: { checks: RealityCheck[] }) {
-  return (
-    <Card>
-      <CardHeader
-        title="Reality Check"
-        description="What the seller implied versus what the customer actually said."
-      />
-      <div className="space-y-4 p-5">
-        {checks.length === 0 ? (
-          <p className="text-sm text-slate-500">No mismatches detected.</p>
-        ) : (
-          checks.map((item) => (
-            <article key={item.id} className="rounded-lg border border-amber-200 bg-amber-50/40 p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">{item.title}</h3>
-                <SeverityBadge severity={item.severity} />
-              </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="rounded-md bg-white p-3">
-                  <p className="text-xs font-semibold uppercase text-slate-500">Seller implied</p>
-                  <p className="mt-1 text-sm">“{item.sellerClaim}”</p>
-                  {item.sellerEvidence ? (
-                    <EvidenceLink evidence={item.sellerEvidence} insightId={`${item.id}-seller`} />
-                  ) : null}
-                </div>
-                <div className="rounded-md bg-white p-3">
-                  <p className="text-xs font-semibold uppercase text-slate-500">Customer reality</p>
-                  <p className="mt-1 text-sm">“{item.customerReality}”</p>
-                  <EvidenceLink evidence={item.customerEvidence} insightId={`${item.id}-customer`} />
-                </div>
-              </div>
-              <p className="mt-3 text-sm text-amber-950">{item.reason}</p>
-            </article>
-          ))
-        )}
+export function RealityCheckSection({
+  checks,
+  transcript,
+}: {
+  checks: RealityCheck[];
+  transcript?: Transcript;
+}) {
+  if (!checks.length) {
+    return (
+      <div className="card pad">
+        <p className="sub">No mismatches detected.</p>
       </div>
-    </Card>
+    );
+  }
+
+  return (
+    <div>
+      <div className="between" style={{ marginBottom: 10 }}>
+        <span className="h-sec">Reality check</span>
+        <span className="tiny">what the rep believes vs what the customer actually said</span>
+      </div>
+      <div className="vstack" style={{ gap: 12 }}>
+        {checks.map((item) => (
+          <RealityCheckCard key={item.id} check={item} transcript={transcript} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RealityCheckCard({ check, transcript }: { check: RealityCheck; transcript?: Transcript }) {
+  const { setFocus } = useEvidenceFocus();
+  const audio = useAudioPlayerOptional();
+  const sellerSeg = transcript ? resolveSegment(transcript, check.sellerEvidence?.segmentIds[0]) : undefined;
+  const customerSeg = transcript ? resolveSegment(transcript, check.customerEvidence.segmentIds[0]) : undefined;
+  const sellerName = transcript && sellerSeg ? speakerFor(transcript, sellerSeg) : "The rep";
+  const customerName = transcript && customerSeg ? speakerFor(transcript, customerSeg) : "The customer";
+  const code = /meeting|commit/i.test(check.title) ? "NO_EXPLICIT_COMMITMENT" : "OVERSTATED_INTENT";
+
+  function play(ids: string[] | undefined, segment?: { startMs: number; endMs: number }) {
+    if (!ids?.length) return;
+    setFocus({ insightId: check.id, segmentIds: ids, play: true });
+    if (segment) void audio?.playRange(segment.startMs, segment.endMs);
+  }
+
+  return (
+    <article className="reality">
+      <div className="reality-top">
+        <span className="chip unproven">⚠ Reality check</span>
+        <span style={{ fontWeight: 800, fontSize: 13.5 }}>{check.title}</span>
+        <span className="grow" />
+        <span className="mono tiny">{code}</span>
+      </div>
+      <div className="reality-grid">
+        <div className="reality-side said">
+          <div className="reality-label">
+            <i className="dot" style={{ color: "var(--unproven)" }} />
+            <span className="reality-who">
+              {sellerName} — the rep — implied
+            </span>
+          </div>
+          <div className="reality-quote">“{sellerSeg?.text ?? check.sellerClaim}”</div>
+          {sellerSeg ? (
+            <button
+              type="button"
+              className="btn sm"
+              aria-label={`Play evidence, ${sellerName} at ${formatClock(sellerSeg.startMs)}`}
+              onClick={() => play(check.sellerEvidence?.segmentIds, sellerSeg)}
+            >
+              <PlayGlyph />
+              <span className="mono">{formatClock(sellerSeg.startMs)}</span>
+            </button>
+          ) : null}
+        </div>
+        <div className="reality-vs">
+          <div className="vs-badge">VS</div>
+        </div>
+        <div className="reality-side truth">
+          <div className="reality-label">
+            <i className="dot" style={{ color: "var(--proof)" }} />
+            <span className="reality-who">
+              {customerName} — the customer — said
+            </span>
+          </div>
+          <div className="reality-quote">“{customerSeg?.text ?? check.customerReality}”</div>
+          {customerSeg ? (
+            <button
+              type="button"
+              className="btn sm play"
+              aria-label={`Play evidence, ${customerName} at ${formatClock(customerSeg.startMs)}`}
+              onClick={() => play(check.customerEvidence.segmentIds, customerSeg)}
+            >
+              <PlayGlyph />
+              <span className="mono">{formatClock(customerSeg.startMs)}</span>
+            </button>
+          ) : (
+            <button type="button" className="btn sm play" onClick={() => play(check.customerEvidence.segmentIds)}>
+              <PlayGlyph />
+              <span>Play evidence</span>
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="reality-verdict">
+        <EvidenceStamp status="BLOCKER" />
+        <span style={{ fontSize: 13, lineHeight: 1.5 }}>{check.reason}</span>
+      </div>
+    </article>
   );
 }

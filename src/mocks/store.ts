@@ -328,6 +328,7 @@ export const mockStore = {
         picked.length > 0
           ? `I found ${picked.length} relevant moments tied to transcript evidence.`
           : undefined,
+      mode: picked.length ? "retrieval" : "no_index",
       moments: picked,
     };
   },

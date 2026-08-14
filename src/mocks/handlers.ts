@@ -279,3 +279,41 @@ export const handlers = [
 
   http.get("/api/v1/recommendations", () => HttpResponse.json(mockStore.recommendations())),
 ];
+
+function healthPayload() {
+  return {
+    status: "ok",
+    operations: ["CREATE_DEAL", "CREATE_NOTE", "CREATE_TASK", "CREATE_CALL", "CREATE_MEETING"],
+  };
+}
+
+async function mockHubspotSync({ request }: { request: Request }) {
+  const body = (await request.json()) as {
+    requestId?: string;
+    operations?: Array<{ operationId?: string; type?: string; data?: Record<string, unknown> }>;
+    slack?: { enabled?: boolean };
+  };
+  const operations = Array.isArray(body.operations) ? body.operations : [];
+  return HttpResponse.json({
+    requestId: body.requestId ?? "mock",
+    status: "SUCCESS",
+    operations: operations.map((operation, index) => ({
+      operationId: operation.operationId ?? `op_${index}`,
+      type: operation.type ?? "CREATE_NOTE",
+      status: "SUCCESS",
+      externalId: `mock-${index + 1}`,
+      fields: operation.data ?? {},
+    })),
+    slack: { status: body.slack?.enabled ? "SUCCESS" : "SKIPPED" },
+  });
+}
+
+export const integrationHandlers = [
+  http.get("/integrations-api/health", () => HttpResponse.json(healthPayload())),
+  http.get("/integrations-api/v1/health", () => HttpResponse.json(healthPayload())),
+  http.post("/integrations-api/v1/hubspot", mockHubspotSync),
+  http.post("/integrations-api/v1/sync", mockHubspotSync),
+  http.get("*/v1/health", () => HttpResponse.json(healthPayload())),
+  http.post("*/v1/hubspot", mockHubspotSync),
+  http.post("*/v1/sync", mockHubspotSync),
+];

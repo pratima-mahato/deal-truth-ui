@@ -1,4 +1,3 @@
-import { Button } from "./Button";
 import type { ReactNode } from "react";
 
 export function EmptyState({
@@ -11,10 +10,10 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-ink-100 bg-surface px-6 py-16 text-center">
-      <h2 className="text-lg font-semibold text-ink-900">{title}</h2>
-      <p className="mt-2 max-w-md text-sm text-ink-500">{description}</p>
-      {action ? <div className="mt-5">{action}</div> : null}
+    <div className="card pad-lg" style={{ textAlign: "center", borderStyle: "dashed" }}>
+      <h2 className="h-sec">{title}</h2>
+      <p className="sub" style={{ marginTop: 8 }}>{description}</p>
+      {action ? <div style={{ marginTop: 16 }}>{action}</div> : null}
     </div>
   );
 }
@@ -29,16 +28,16 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-10 text-center">
-      <h2 className="text-lg font-semibold text-red-900">{title}</h2>
-      <p className="mt-2 max-w-md text-sm text-red-800 break-words">{description}</p>
-      {onRetry ? (
-        <div className="mt-4">
-          <Button variant="secondary" onClick={onRetry}>
+    <div className="page narrow">
+      <div className="card pad-lg" style={{ textAlign: "center", borderColor: "var(--blocker-line)", background: "var(--blocker-soft)" }}>
+        <h2 className="h-sec" style={{ color: "var(--blocker)" }}>{title}</h2>
+        <p className="sub" style={{ marginTop: 8 }}>{description}</p>
+        {onRetry ? (
+          <button type="button" className="btn" style={{ marginTop: 14 }} onClick={onRetry}>
             Retry
-          </Button>
-        </div>
-      ) : null}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

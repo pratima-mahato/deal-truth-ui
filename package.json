@@ -1,9 +1,9 @@
 {
-  "name": "open-gong-web",
+  "name": "deal-truth-ui",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "OpenGong Lite / DealTruth — standalone call-intelligence web application",
+  "description": "Deal Truth — evidence-backed call intelligence. No proof in the transcript, no claim in the report.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -15,7 +15,13 @@
     "test:e2e": "playwright test",
     "screenshot:demo": "playwright test e2e/screenshot.spec.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down --remove-orphans",
+    "design": "open design/prototype.html || xdg-open design/prototype.html",
+    "parity": "playwright test e2e/parity.spec.ts",
+    "check:brand": "! grep -ril 'open.\\?gong' src index.html README.md e2e package.json LICENSE",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:brand && npm run parity"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.5",

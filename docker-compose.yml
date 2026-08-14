@@ -1,0 +1,20 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: deal-truth-ui:local
+    container_name: deal-truth-ui
+    ports:
+      - "${PORT:-10000}:10000"
+    environment:
+      PORT: "10000"
+      API_UPSTREAM: ${API_UPSTREAM:-${VITE_API_BASE_URL:-}}
+      API_KEY: ${API_KEY:-${VITE_API_KEY:-}}
+      API_BASE_URL: ${API_BASE_URL:-}
+      INTEGRATION_UPSTREAM: ${INTEGRATION_UPSTREAM:-http://host.docker.internal:4001}
+      INTEGRATION_API_BASE_URL: ${INTEGRATION_API_BASE_URL:-${VITE_INTEGRATION_API_BASE_URL:-}}
+      INTEGRATION_API_TOKEN: ${INTEGRATION_API_TOKEN:-${VITE_INTEGRATION_API_TOKEN:-}}
+      UPLOAD_MAX_BODY_SIZE: ${UPLOAD_MAX_BODY_SIZE:-100m}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -1,94 +1,127 @@
-import { Pause, Play, RotateCcw, RotateCw, Volume2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Pause, RotateCcw, RotateCw, Volume2 } from "lucide-react";
 import { formatClock } from "@/lib/utils";
 import { useAudioPlayer } from "./AudioPlayerProvider";
 import { Waveform } from "./Waveform";
+import { PlayGlyph } from "@/components/brand/ChakraMark";
 import type { CallMoment, Transcript } from "@/api/contracts";
 
 const SPEEDS = [1, 1.25, 1.5, 2];
+
+const MOMENT_ICONS: Record<string, string> = {
+  pain: "⚡",
+  pricing: "$",
+  buying_signal: "↑",
+  competitor: "⚔",
+  security: "▣",
+  next_step: "→",
+};
 
 export function AudioPlayer({
   moments = [],
   transcript,
   seed,
   onMomentClick,
+  talkRatio,
 }: {
   moments?: CallMoment[];
   transcript?: Transcript;
   seed?: string;
   onMomentClick?: (moment: CallMoment) => void;
+  talkRatio?: { sellerPct: number; customerPct: number };
 }) {
-  const { playing, currentMs, durationMs, playbackRate, toggle, skip, seekTo, playFrom, setPlaybackRate, setVolume, volume } =
-    useAudioPlayer();
-  const speakers = transcript?.speakers ?? [];
-  const duration = Math.max(durationMs, 1);
+  const {
+    playing,
+    currentMs,
+    durationMs,
+    playbackRate,
+    toggle,
+    skip,
+    seekTo,
+    playFrom,
+    setPlaybackRate,
+    setVolume,
+    volume,
+    activeRange,
+  } = useAudioPlayer();
+  const duration = durationMs || 1;
 
   return (
-    <div className="rounded-xl border border-ink-100 bg-surface p-4 shadow-card">
+    <div className="card pad" style={{ flex: "0 0 auto" }}>
+      <div className="between" style={{ marginBottom: 9 }}>
+        <span className="eyebrow">The recording</span>
+        <span className="mono tiny">
+          {formatClock(currentMs)} / {formatClock(durationMs)}
+        </span>
+      </div>
       <Waveform
         durationMs={durationMs}
         currentMs={currentMs}
         seed={seed ?? "call"}
+        playing={playing}
+        evidenceStartMs={activeRange?.startMs}
+        evidenceEndMs={activeRange?.endMs}
         onSeek={(ms) => {
           seekTo(ms);
           void playFrom(ms);
         }}
       />
-      {speakers.length > 0 && transcript ? (
-        <div className="mt-3 space-y-1.5">
-          {speakers.map((speaker) => (
-            <div key={speaker.id} className="flex items-center gap-2">
-              <span className="w-28 truncate text-[11px] font-medium text-ink-500">{speaker.displayName}</span>
-              <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-ink-100">
-                {transcript.segments
-                  .filter((s) => s.speakerId === speaker.id)
-                  .map((segment) => (
-                    <span
-                      key={segment.id}
-                      className={speaker.role === "seller" ? "absolute inset-y-0 bg-violet-400" : "absolute inset-y-0 bg-emerald-400"}
-                      style={{
-                        left: `${(segment.startMs / duration) * 100}%`,
-                        width: `${Math.max(0.4, ((segment.endMs - segment.startMs) / duration) * 100)}%`,
-                      }}
-                    />
-                  ))}
-              </div>
-            </div>
-          ))}
-          {moments.length ? (
-            <div className="flex items-center gap-2">
-              <span className="w-28 text-[11px] font-medium text-ink-500">Topics</span>
-              <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-ink-100">
-                {moments.map((moment) => (
-                  <button
-                    key={moment.id}
-                    type="button"
-                    title={moment.label}
-                    className="absolute inset-y-0 rounded-full bg-amber-400"
-                    style={{ left: `${(moment.startMs / duration) * 100}%`, width: "2.5%" }}
-                    onClick={() => onMomentClick?.(moment)}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
+      <div className="lane" style={{ height: 38 }}>
+        {moments.map((moment, index) => (
+          <button
+            key={moment.id}
+            type="button"
+            className="lane-tick"
+            style={{ left: `${(moment.startMs / duration) * 100}%`, top: index % 2 ? 19 : 0 }}
+            title={`${moment.label} · ${formatClock(moment.startMs)}`}
+            onClick={() => onMomentClick?.(moment)}
+          >
+            {MOMENT_ICONS[moment.kind] ?? "•"}
+          </button>
+        ))}
+      </div>
+      {transcript ? (
+        <div className="speaker-lane">
+          {transcript.segments.map((segment) => {
+            const speaker = transcript.speakers.find((s) => s.id === segment.speakerId);
+            return (
+              <i
+                key={segment.id}
+                style={{
+                  flex: Math.max(1, segment.endMs - segment.startMs),
+                  background: speaker?.role === "customer" ? "var(--proof)" : "var(--brand)",
+                  opacity: 0.55,
+                }}
+              />
+            );
+          })}
         </div>
       ) : null}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Button size="sm" aria-label={playing ? "Pause" : "Play"} onClick={toggle}>
-          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-        </Button>
-        <Button size="sm" variant="ghost" aria-label="Back 15 seconds" onClick={() => skip(-15000)}>
-          <RotateCcw className="h-4 w-4" />
+      <div className="tiny" style={{ marginTop: 9, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <span>
+          <i className="dot" style={{ display: "inline-block", color: "var(--brand)" }} /> rep
+          {talkRatio ? ` ${Math.round(talkRatio.sellerPct)}%` : ""}
+        </span>
+        <span>
+          <i className="dot" style={{ display: "inline-block", color: "var(--proof)" }} /> customer
+          {talkRatio ? ` ${Math.round(talkRatio.customerPct)}%` : ""}
+        </span>
+        <span style={{ color: "var(--text-3)" }}>click the wave or a marker to hear it</span>
+      </div>
+      <div className="hstack" style={{ marginTop: 10, flexWrap: "wrap" }}>
+        <button type="button" className="btn sm" aria-label={playing ? "Pause" : "Play"} onClick={toggle}>
+          {playing ? <Pause className="h-3.5 w-3.5" /> : <PlayGlyph />}
+        </button>
+        <button type="button" className="btn sm ghost" aria-label="Back 15 seconds" onClick={() => skip(-15000)}>
+          <RotateCcw className="h-3.5 w-3.5" />
           15
-        </Button>
-        <Button size="sm" variant="ghost" aria-label="Forward 15 seconds" onClick={() => skip(15000)}>
-          <RotateCw className="h-4 w-4" />
+        </button>
+        <button type="button" className="btn sm ghost" aria-label="Forward 15 seconds" onClick={() => skip(15000)}>
+          <RotateCw className="h-3.5 w-3.5" />
           15
-        </Button>
+        </button>
         <button
           type="button"
-          className="rounded-md px-2 py-1 font-mono text-xs text-ink-600 hover:bg-violet-50"
+          className="btn sm ghost mono"
           onClick={() => {
             const i = SPEEDS.indexOf(playbackRate);
             setPlaybackRate(SPEEDS[(i + 1) % SPEEDS.length]);
@@ -96,7 +129,7 @@ export function AudioPlayer({
         >
           {playbackRate}x
         </button>
-        <div className="flex items-center gap-2 text-ink-400">
+        <span className="hstack" style={{ color: "var(--text-3)" }}>
           <Volume2 className="h-4 w-4" />
           <input
             type="range"
@@ -105,13 +138,9 @@ export function AudioPlayer({
             step={0.05}
             value={volume}
             aria-label="Volume"
-            className="w-20 accent-violet-600"
             onChange={(e) => setVolume(Number(e.target.value))}
           />
-        </div>
-        <div className="ml-auto font-mono text-xs text-ink-500">
-          {formatClock(currentMs)} / {durationMs > 0 ? formatClock(durationMs) : "—"}
-        </div>
+        </span>
       </div>
     </div>
   );

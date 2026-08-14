@@ -1,8 +1,10 @@
-import type { CustomerFact, CustomerTruthCategory } from "@/api/contracts";
-import { Card, CardHeader } from "@/components/ui/Card";
-import { EvidenceStatusBadge } from "@/components/ui/Badge";
-import { EvidenceLink } from "@/components/evidence/EvidenceLink";
+import type { CustomerFact, CustomerTruthCategory, Transcript } from "@/api/contracts";
 import { CUSTOMER_TRUTH_CATEGORIES } from "@/api/contracts";
+import { EvidenceStamp } from "@/components/evidence/EvidenceStamp";
+import { EvidenceReceipt } from "@/components/evidence/EvidenceReceipt";
+import { ArrowGlyph } from "@/components/brand/ChakraMark";
+import { useEvidenceFocus } from "@/components/evidence/EvidenceFocusContext";
+import { evidenceToStamp, resolveSegment } from "@/lib/evidence";
 
 const labels: Record<CustomerTruthCategory, string> = {
   pain: "Pain",
@@ -15,42 +17,66 @@ const labels: Record<CustomerTruthCategory, string> = {
   commitment: "Commitment",
 };
 
-export function CustomerTruthSection({ facts }: { facts: CustomerFact[] }) {
+export function CustomerTruthSection({
+  facts,
+  transcript,
+}: {
+  facts: CustomerFact[];
+  transcript?: Transcript;
+}) {
+  const { setFocus } = useEvidenceFocus();
+
   return (
-    <Card>
-      <CardHeader
-        title="Customer Truth"
-        description="Only statements the customer actually made. Unconfirmed items stay unconfirmed."
-      />
-      <div className="grid gap-3 p-5 md:grid-cols-2">
-        {CUSTOMER_TRUTH_CATEGORIES.map((category) => {
-          const items = facts.filter((f) => f.category === category);
-          if (!items.length) return null;
-          return items.map((fact) => (
-            <article key={fact.id} className="rounded-lg border border-slate-100 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div>
+      <div className="between" style={{ marginBottom: 10 }}>
+        <span className="h-sec">Customer truth</span>
+        <span className="tiny">customer segments only — the rep's words are never quoted here</span>
+      </div>
+      <div className="split">
+        {CUSTOMER_TRUTH_CATEGORIES.flatMap((category) => facts.filter((f) => f.category === category)).map((fact) => {
+          const segment = transcript ? resolveSegment(transcript, fact.evidence.segmentIds[0]) : undefined;
+          const stamp = evidenceToStamp(fact.evidenceStatus, fact.category === "blocker");
+          return (
+            <article key={fact.id} className="card pad reveal">
+              <div className="between" style={{ marginBottom: 7 }}>
+                <span className={`chip ${fact.evidenceStatus === "SUPPORTED" ? "proof" : "absent"}`}>
                   {labels[fact.category]}
-                </p>
-                <EvidenceStatusBadge status={fact.evidenceStatus} />
+                </span>
+                <EvidenceStamp status={stamp} />
               </div>
-              <h3 className="mt-2 text-sm font-semibold text-navy-900">{fact.title}</h3>
-              <p className="mt-1 text-sm text-slate-600">{fact.summary}</p>
-              {fact.quote ? (
-                <blockquote className="mt-3 border-l-2 border-navy-800 pl-3 text-sm italic text-navy-800">
-                  “{fact.quote}”
-                </blockquote>
-              ) : (
-                <p className="mt-3 text-sm text-amber-800">No evidence found.</p>
-              )}
-              {fact.speakerName ? (
-                <p className="mt-2 text-xs text-slate-500">{fact.speakerName}</p>
-              ) : null}
-              <EvidenceLink evidence={fact.evidence} insightId={fact.id} />
+              <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: "-.01em", marginBottom: 4 }}>{fact.title}</div>
+              <div className="sub" style={{ fontSize: 12.5, marginBottom: 9 }}>
+                {fact.summary}
+              </div>
+              <EvidenceReceipt segment={segment} transcript={transcript} status={stamp} compact />
+              <div className="hstack" style={{ marginTop: 9 }}>
+                <button
+                  type="button"
+                  className="btn sm ghost"
+                  onClick={() =>
+                    setFocus({
+                      insightId: fact.id,
+                      segmentIds: fact.evidence.segmentIds,
+                      play: false,
+                      drawer: {
+                        id: fact.id,
+                        title: fact.title,
+                        kind: "fact",
+                        why: fact.summary,
+                        quote: fact.quote,
+                        speakerName: fact.speakerName,
+                        evidenceStatus: fact.evidenceStatus,
+                      },
+                    })
+                  }
+                >
+                  Why we think this <ArrowGlyph />
+                </button>
+              </div>
             </article>
-          ));
+          );
         })}
       </div>
-    </Card>
+    </div>
   );
 }

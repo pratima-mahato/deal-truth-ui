@@ -22,6 +22,7 @@ import {
   type SpeakerPatchRequest,
   type SpeakerRole,
   type Transcript,
+  ASK_MODES,
   askAnswerSchema,
   callReportSchema,
   callSchema,
@@ -183,6 +184,14 @@ export function mapCall(raw: unknown): Call {
     sourceType: asSourceType(pick(obj, "source_type", "sourceType")),
     biggestRisk: str(pick(obj, "biggest_risk", "biggestRisk")) || undefined,
     signalBadges: asArray(pick(obj, "signal_badges", "signalBadges")).map((item) => str(item)),
+    signalPips: (() => {
+      const pips = asArray(pick(obj, "signal_pips", "signalPips"))
+        .map((item) => str(item))
+        .filter((item): item is "proven" | "blocked" | "weak" | "missing" =>
+          item === "proven" || item === "blocked" || item === "weak" || item === "missing",
+        );
+      return pips.length ? pips : undefined;
+    })(),
   };
   return callSchema.parse(mapped);
 }
@@ -328,7 +337,7 @@ function mapCustomerFact(raw: unknown) {
 }
 
 function emptyBattlecard() {
-  return { goal: "", questions: [], prepareFor: [], doNotForget: [], missingFields: [] };
+  return { goal: "", questions: [], prepareFor: [], doNotForget: [], missingFields: [], warning: undefined as string | undefined };
 }
 
 function emptyManagerBrief() {
@@ -483,10 +492,18 @@ export function mapReport(raw: unknown): CallReport {
         questions: mapStringList(pick(nextCallRaw, "questions")),
         prepareFor: asArray(pick(nextCallRaw, "prepare_for", "prepareFor")).map((item) => {
           const p = asRecord(item);
-          return { title: str(pick(p, "title")), detail: str(pick(p, "detail")) };
+          const evidenceIds = pick(p, "evidence_segment_ids", "evidenceSegmentIds");
+          return {
+            title: str(pick(p, "title")),
+            detail: str(pick(p, "detail")),
+            evidenceSegmentIds: Array.isArray(evidenceIds)
+              ? evidenceIds.map((id) => str(id)).filter(Boolean)
+              : mapEvidence(p).segmentIds,
+          };
         }),
         doNotForget: mapStringList(pick(nextCallRaw, "do_not_forget", "doNotForget")),
         missingFields: mapStringList(pick(nextCallRaw, "missing_fields", "missingFields")),
+        warning: str(pick(nextCallRaw, "warning")) || undefined,
       }
     : emptyBattlecard();
   if (!Object.keys(nextCallRaw).length) unavailable.push("nextCall");
@@ -524,6 +541,10 @@ export function mapReport(raw: unknown): CallReport {
             label: str(pick(p, "label")),
             emotions: mapStringList(pick(p, "emotions")),
             evidence: mapEvidence(pick(p, "evidence") ?? p),
+            intentValence:
+              pick(p, "intent_valence", "intentValence") == null
+                ? undefined
+                : num(pick(p, "intent_valence", "intentValence")),
           };
         }),
       }
@@ -564,6 +585,10 @@ export function mapReport(raw: unknown): CallReport {
           const k = asRecord(item);
           return { term: str(pick(k, "term")), count: num(pick(k, "count")) };
         }),
+        silenceGapCount:
+          pick(metricsRaw, "silence_gap_count", "silenceGapCount") == null
+            ? undefined
+            : num(pick(metricsRaw, "silence_gap_count", "silenceGapCount")),
       }
     : emptyMetrics();
   if (!Object.keys(metricsRaw).length) unavailable.push("metrics");
@@ -664,9 +689,16 @@ export function mapAsk(raw: unknown): AskAnswer {
       evidence: mapEvidence(pick(s, "evidence") ?? s),
     };
   });
+  const modeRaw = str(pick(obj, "mode"));
+  const mode = (ASK_MODES as readonly string[]).includes(modeRaw)
+    ? (modeRaw as (typeof ASK_MODES)[number])
+    : moments.length
+      ? "retrieval"
+      : undefined;
   return askAnswerSchema.parse({
     question: str(pick(obj, "question")),
     synthesis: str(pick(obj, "synthesis")) || undefined,
+    mode,
     moments,
   });
 }

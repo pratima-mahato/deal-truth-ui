@@ -1,5 +1,4 @@
-import { Play, Quote } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { PlayGlyph, ArrowGlyph } from "@/components/brand/ChakraMark";
 import { useEvidenceFocus, type InsightDrawerPayload } from "./EvidenceFocusContext";
 import type { EvidenceRef } from "@/api/contracts";
 
@@ -17,25 +16,25 @@ export function EvidenceLink({
   const { setFocus } = useEvidenceFocus();
   const has = evidence.segmentIds.length > 0;
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
-      <Button
-        size="sm"
-        variant="secondary"
+    <div className="hstack" style={{ flexWrap: "wrap", marginTop: 10 }}>
+      <button
+        type="button"
+        className="btn sm play"
         disabled={disabled || !has}
+        aria-label="Play evidence"
         onClick={() => setFocus({ insightId, segmentIds: evidence.segmentIds, play: true, drawer })}
       >
-        <Play className="h-3.5 w-3.5" />
-        Play evidence
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
+        <PlayGlyph />
+        <span>Play evidence</span>
+      </button>
+      <button
+        type="button"
+        className="btn sm ghost"
         disabled={!has}
         onClick={() => setFocus({ insightId, segmentIds: evidence.segmentIds, play: false, drawer })}
       >
-        <Quote className="h-3.5 w-3.5" />
-        Why we think this
-      </Button>
+        Why we think this <ArrowGlyph />
+      </button>
     </div>
   );
 }

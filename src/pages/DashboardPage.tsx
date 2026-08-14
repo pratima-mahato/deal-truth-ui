@@ -4,16 +4,13 @@ import { CallDropZone } from "@/features/ingest/CallDropZone";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { StatusPill } from "@/components/ui/Badge";
 import { PageSkeleton } from "@/components/ui/Skeleton";
-import { Button } from "@/components/ui/Button";
-import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
+import { ProofPips, callPips } from "@/features/calls/DealSignalStrip";
+import { GATE_CLAIMS_REFUSED, GATE_CLAIMS_SHIPPED } from "@/lib/evidence";
 import { useCalls, useRecommendations, useSampleCall, useUploadFlow } from "@/hooks/useCallApi";
-import { cn, formatDate, formatDuration } from "@/lib/utils";
+import { formatDate, formatDuration } from "@/lib/utils";
 import { env } from "@/config/env";
-import { isReportReadyStatus, type Call } from "@/api/contracts";
-
-function callHref(call: Call) {
-  return isReportReadyStatus(call.status) ? `/calls/${call.id}/overview` : `/calls/${call.id}/processing`;
-}
+import { isReportReadyStatus } from "@/api/contracts";
+import { ArrowGlyph } from "@/components/brand/ChakraMark";
 
 export function DashboardPage() {
   const calls = useCalls();
@@ -35,8 +32,6 @@ export function DashboardPage() {
   }
 
   const items = calls.data?.items ?? [];
-  const showRep = items.some((call) => Boolean(call.repName));
-  const showSignals = items.some((call) => Boolean(call.biggestRisk || call.signalBadges?.length));
 
   function analyze() {
     if (!file) return;
@@ -50,23 +45,58 @@ export function DashboardPage() {
         sourceType: "upload",
         file,
       },
-      {
-        onSuccess: (call) => navigate(`/calls/${call.id}/processing`),
-      },
+      { onSuccess: (call) => navigate(`/calls/${call.id}/processing`) },
     );
   }
 
   return (
-    <div className="space-y-10">
-      <section className="max-w-3xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-700">OpenGong</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink-900 text-balance sm:text-4xl">
-          Turn conversations into deal intelligence.
-        </h1>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-ink-500">
-          Upload a call recording and let OpenGong uncover what was said, what matters, and what happens next.
-        </p>
-      </section>
+    <div className="page mid">
+      <div className="between" style={{ marginBottom: 18, flexWrap: "wrap", gap: 14 }}>
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 6 }}>
+            Deal Truth · workspace
+          </div>
+          <h1 className="hero-title" style={{ maxWidth: "17ch" }}>
+            The call intelligence tool that <span className="mark-saffron">shows its receipts</span>.
+          </h1>
+          <p className="invariant" style={{ marginTop: 9 }}>
+            No proof in the transcript, no claim in the report.
+          </p>
+        </div>
+        <div className="hstack">
+          <Link to="/upload" className="btn">
+            Upload a call
+          </Link>
+          {items[0] ? (
+            <Link to={`/calls/${env.demoCallId}/verdict`} className="btn primary">
+              Open the Acme call <ArrowGlyph />
+            </Link>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="split3" style={{ marginBottom: 18 }}>
+        {[
+          { n: "①", t: "Every insight has proof", d: "Click any claim and hear the customer say it. Nothing ships without a segment behind it.", c: "proof", to: `/calls/${env.demoCallId}/verdict` },
+          { n: "②", t: "Every risk has a reason", d: "No health score. Eight dimensions, each either stated, blocked, or never mentioned.", c: "blocker", to: "/deals/acme" },
+          { n: "③", t: "Every call ends with an action", d: "A battlecard and a follow-up email built only from what was actually agreed.", c: "brand", to: `/calls/${env.demoCallId}/act` },
+        ].map((card) => (
+          <Link key={card.t} to={card.to} className="card lift pad reveal" style={{ textAlign: "left" }}>
+            <div className="hstack" style={{ marginBottom: 7 }}>
+              <span className="serif" style={{ fontSize: 24, color: `var(--${card.c})` }}>
+                {card.n}
+              </span>
+              <span style={{ fontWeight: 800, fontSize: 13.5 }}>{card.t}</span>
+              <span className={`chip ${card.c === "proof" ? "proof" : card.c === "blocker" ? "blocker" : "brand"}`}>
+                {card.c === "proof" ? "PROVEN" : card.c === "blocker" ? "NOT FOUND" : "receipt"}
+              </span>
+            </div>
+            <div className="sub" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+              {card.d}
+            </div>
+          </Link>
+        ))}
+      </div>
 
       <CallDropZone
         file={file}
@@ -76,33 +106,13 @@ export function DashboardPage() {
         error={upload.isError ? (upload.error instanceof Error ? upload.error.message : "Upload failed") : null}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-ink-900">Recent conversations</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link to="/upload">
-            <Button variant="secondary" size="sm">
-              Upload details
-            </Button>
-          </Link>
-          {env.useMocks ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() =>
-                sample.mutate(undefined, {
-                  onSuccess: (call) => navigate(`/calls/${call.id}/processing`),
-                })
-              }
-            >
-              Load sample call
-            </Button>
-          ) : null}
-        </div>
+      <div className="between" style={{ margin: "18px 0 10px" }}>
+        <span className="h-sec">Recent calls</span>
+        <span className="tiny">
+          Pips show the 8 deal dimensions · <span style={{ color: "var(--proof)" }}>proven</span> ·{" "}
+          <span style={{ color: "var(--blocker)" }}>blocked</span> · <span style={{ color: "var(--text-3)" }}>not found</span>
+        </span>
       </div>
-
-      {recs.data?.available === false ? null : recs.data?.items ? (
-        <RecommendationsPanel items={recs.data.items} />
-      ) : null}
 
       {items.length === 0 ? (
         <EmptyState
@@ -114,85 +124,97 @@ export function DashboardPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-ink-100 bg-surface">
-          <table className="w-full min-w-[28rem] text-left text-sm">
-            <thead className="bg-paper text-xs uppercase tracking-wide text-ink-400">
-              <tr>
-                <th className="px-4 py-3 font-medium">Call</th>
-                {showRep ? <th className="hidden px-4 py-3 font-medium sm:table-cell">Rep</th> : null}
-                <th className="hidden px-4 py-3 font-medium md:table-cell">Duration</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                {showSignals ? <th className="hidden px-4 py-3 font-medium lg:table-cell">Signals</th> : null}
-                <th className="px-4 py-3 font-medium"><span className="sr-only">Open</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((call) => {
-                const href = callHref(call);
-                const ready = isReportReadyStatus(call.status);
-                const label = call.customerName || call.title || call.id;
-                const openRow = (event: { metaKey?: boolean; ctrlKey?: boolean; button?: number }) => {
-                  if (event.metaKey || event.ctrlKey || event.button === 1) {
-                    window.open(href, "_blank", "noopener,noreferrer");
-                    return;
-                  }
-                  navigate(href);
-                };
-                return (
-                  <tr
-                    key={call.id}
-                    tabIndex={0}
-                    role="link"
-                    aria-label={`${ready ? "Open" : "View"} ${label}`}
-                    className="group cursor-pointer border-t border-ink-100/80 hover:bg-violet-50/50 focus-visible:bg-violet-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-400"
-                    onClick={openRow}
-                    onAuxClick={openRow}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        navigate(href);
-                      }
-                    }}
-                  >
-                    <td className="px-4 py-3">
-                      <p
-                        className={cn(
-                          "font-medium group-hover:underline",
-                          ready ? "text-violet-700" : "text-ink-900",
-                        )}
-                      >
-                        {label}
-                      </p>
-                      <p className="text-xs text-ink-500">
-                        {call.title} · {formatDate(call.createdAt)}
-                      </p>
-                    </td>
-                    {showRep ? (
-                      <td className="hidden px-4 py-3 text-ink-600 sm:table-cell">{call.repName || "—"}</td>
-                    ) : null}
-                    <td className="hidden px-4 py-3 text-ink-600 md:table-cell">{formatDuration(call.durationMs)}</td>
-                    <td className="px-4 py-3">
-                      <StatusPill status={call.status} />
-                    </td>
-                    {showSignals ? (
-                      <td className="hidden px-4 py-3 lg:table-cell">
-                        <p className="text-xs text-ink-600">
-                          {call.biggestRisk || call.signalBadges?.join(" · ") || "—"}
-                        </p>
-                      </td>
-                    ) : null}
-                    <td className="px-4 py-3 text-right">
-                      <span className="pointer-events-none inline-flex h-8 items-center rounded-lg border border-ink-100 bg-white px-3 text-sm font-medium text-ink-900">
-                        {ready ? "Open" : "View"}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="rows">
+          <div className="row head">
+            <div>Customer</div>
+            <div>Rep</div>
+            <div>Length</div>
+            <div>What's in the way</div>
+            <div>Proof</div>
+          </div>
+          {items.map((call) => {
+            const href = isReportReadyStatus(call.status)
+              ? `/calls/${call.id}/verdict`
+              : `/calls/${call.id}/processing`;
+            const failed = call.status === "FAILED";
+            return (
+              <div
+                key={call.id}
+                className="row"
+                onClick={() => {
+                  if (!failed) navigate(href);
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                    {call.customerName || call.title || call.id}{" "}
+                    <span style={{ color: "var(--text-3)", fontWeight: 500 }}>· {call.title}</span>
+                  </div>
+                  <div className="tiny" style={{ marginTop: 2 }}>
+                    {formatDate(call.createdAt)}
+                  </div>
+                </div>
+                <div className="sub">{call.repName || "—"}</div>
+                <div className="mono tiny">{formatDuration(call.durationMs)}</div>
+                <div className="hstack">
+                  <StatusPill status={call.status} />
+                  <span className="tiny" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {failed ? call.failureMessage || call.biggestRisk || "Failed" : call.biggestRisk || "—"}
+                  </span>
+                </div>
+                <ProofPips states={failed ? [] : callPips(call)} />
+              </div>
+            );
+          })}
         </div>
       )}
+
+      <div className="split" style={{ marginTop: 18 }}>
+        <div className="card pad">
+          <div className="eyebrow" style={{ marginBottom: 8 }}>
+            Across your calls this week
+          </div>
+          {(recs.data?.items ?? []).slice(0, 4).map((item) => (
+            <Link key={item.id} to={`/search?q=${encodeURIComponent(item.query)}`} className="between" style={{ padding: "8px 0" }}>
+              <span style={{ fontSize: 13 }}>{item.description || item.title}</span>
+              <ArrowGlyph />
+            </Link>
+          ))}
+        </div>
+        <div className="card pad">
+          <div className="eyebrow" style={{ marginBottom: 8 }}>
+            The gate, this week
+          </div>
+          <div className="split">
+            <div>
+              <div className="big-num" style={{ fontSize: 48, color: "var(--proof)" }}>
+                {GATE_CLAIMS_SHIPPED}
+              </div>
+              <div className="tiny">claims shipped with proof</div>
+              <span className="chip proof" style={{ marginTop: 8 }}>PROVEN</span>
+            </div>
+            <div>
+              <div className="big-num" style={{ fontSize: 48, color: "var(--blocker)" }}>
+                {GATE_CLAIMS_REFUSED}
+              </div>
+              <div className="tiny">claims refused</div>
+              <span className="chip blocker" style={{ marginTop: 8 }}>NOT FOUND</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {env.useMocks ? (
+        <div style={{ marginTop: 16 }}>
+          <button
+            type="button"
+            className="btn sm"
+            onClick={() => sample.mutate(undefined, { onSuccess: (call) => navigate(`/calls/${call.id}/processing`) })}
+          >
+            Load sample call
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

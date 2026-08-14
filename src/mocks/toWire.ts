@@ -33,6 +33,9 @@ export function toWireCall(call: Call): Record<string, unknown> {
     failure_kind: call.failureKind ?? null,
     language: call.language,
     completed_at: call.completedAt ?? null,
+    biggest_risk: call.biggestRisk ?? null,
+    signal_badges: call.signalBadges ?? [],
+    signal_pips: call.signalPips ?? [],
   };
 }
 

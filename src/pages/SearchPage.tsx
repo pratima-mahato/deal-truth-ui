@@ -1,144 +1,188 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { Input } from "@/components/ui/Input";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { PageSkeleton } from "@/components/ui/Skeleton";
-import { Badge } from "@/components/ui/Badge";
 import { useSearch } from "@/hooks/useCallApi";
-import { ApiError, userFacingMessage } from "@/api/errors";
+import { ApiError } from "@/api/errors";
 import type { SearchResult } from "@/api/contracts";
-import { cn, formatClock } from "@/lib/utils";
+import { formatClock, highlightText } from "@/lib/utils";
+import { EvidenceStamp } from "@/components/evidence/EvidenceStamp";
+import { PlayGlyph, ArrowGlyph } from "@/components/brand/ChakraMark";
 
 const SUGGESTIONS = [
-  "pricing objections",
-  "Customers asking about integrations",
-  "High intent calls this week",
-  "No next step",
-  "Competitor mentions",
+  "no next step",
+  "security",
+  "pricing",
+  "competitor",
+  "commitment",
+  "budget",
 ];
 
-const openLinkClass =
-  "inline-flex h-8 shrink-0 items-center rounded-lg border border-ink-100 bg-white px-3 text-sm font-medium text-ink-900 hover:border-violet-200 hover:bg-violet-50";
-
-function resultHref(item: SearchResult): string {
-  if (!item.callId) return "/search";
-  const segment = item.kind === "segment" ? item.evidence?.segmentIds[0] : undefined;
-  if (segment) return `/calls/${item.callId}/transcript?segment=${segment}&play=1`;
-  return `/calls/${item.callId}/overview`;
+function Marked({ text, query }: { text: string; query: string }) {
+  return (
+    <>
+      {highlightText(text, query).map((part, i) =>
+        part.hit ? <mark key={i}>{part.text}</mark> : <span key={i}>{part.text}</span>,
+      )}
+    </>
+  );
 }
 
-function ResultList({ title, items, actionLabel }: { title: string; items: SearchResult[]; actionLabel: string }) {
-  const visible = items.filter((item) => item.callId);
-  if (!visible.length) return null;
+function InsightRow({ item, query }: { item: SearchResult; query: string }) {
+  const segment = item.evidence?.segmentIds[0];
+  const to =
+    segment != null ? `/calls/${item.callId}/verdict?segment=${segment}&play=1` : `/calls/${item.callId}/verdict`;
   return (
-    <section className="mb-8">
-      <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">{title}</h2>
-      <ul className="space-y-2">
-        {visible.map((item) => {
-          const href = resultHref(item);
-          const showQuote = item.snippet && item.snippet !== item.title;
-          return (
-            <li key={item.id}>
-              <Link
-                to={href}
-                className="flex flex-col gap-3 rounded-xl border border-ink-100 bg-surface px-5 py-4 transition hover:border-violet-200 hover:shadow-card sm:flex-row sm:items-start sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-ink-900">{item.title}</p>
-                  {showQuote ? (
-                    <p className="mt-1 text-sm leading-relaxed text-ink-600">“{item.snippet}”</p>
-                  ) : null}
-                  <p className="mt-2 text-xs text-ink-400">
-                    {item.callTitle !== item.title ? item.callTitle : "Call"}
-                    {item.startMs != null ? ` · ${formatClock(item.startMs)}` : ""}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {item.insightType ? <Badge tone="violet">{item.insightType.replace("_", " ")}</Badge> : null}
-                  <span className={openLinkClass}>{actionLabel}</span>
-                </div>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <Link to={to} className="receipt">
+      <div className="receipt-head">
+        <EvidenceStamp status="SUPPORTED" />
+        <span className="chip">{item.callTitle}</span>
+        {item.insightType ? <span className="chip brand">{item.insightType.replace("_", " ")}</span> : null}
+        <span className="grow" />
+        <span className="receipt-src mono">{item.startMs != null ? formatClock(item.startMs) : ""}</span>
+      </div>
+      <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 4 }}>
+        <Marked text={item.title} query={query} />
+      </div>
+      <div className="sub" style={{ fontSize: 12.5 }}>
+        <Marked text={item.snippet} query={query} />
+      </div>
+    </Link>
   );
+}
+
+function SegmentReceipt({ item, query }: { item: SearchResult; query: string }) {
+  const segment = item.evidence?.segmentIds[0];
+  const to =
+    segment != null ? `/calls/${item.callId}/verdict?segment=${segment}&play=1` : `/calls/${item.callId}/verdict`;
+  const hasAudio = Boolean(segment);
+  return (
+    <div className="receipt">
+      <div className="receipt-head">
+        <EvidenceStamp status="SUPPORTED" />
+        <span className="chip">{item.callTitle}</span>
+        <span className="grow" />
+        <span className="receipt-src mono">{item.startMs != null ? formatClock(item.startMs) : ""}</span>
+      </div>
+      <div className="receipt-q">
+        “<Marked text={item.snippet} query={query} />”
+      </div>
+      <div className="receipt-meta">
+        {hasAudio ? (
+          <Link to={to} className="btn sm play">
+            <PlayGlyph />
+            <span>audio available</span>
+          </Link>
+        ) : (
+          <>
+            <span className="chip absent">transcript only</span>
+            <Link to={to} className="btn sm ghost">
+              Open call <ArrowGlyph />
+            </Link>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function groupByCall(items: SearchResult[]): Array<{ callTitle: string; items: SearchResult[] }> {
+  const map = new Map<string, SearchResult[]>();
+  for (const item of items) {
+    const current = map.get(item.callTitle) ?? [];
+    current.push(item);
+    map.set(item.callTitle, current);
+  }
+  return [...map.entries()].map(([callTitle, grouped]) => ({ callTitle, items: grouped }));
 }
 
 export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const search = useSearch(q);
-
-  const unavailable =
-    search.isError && search.error instanceof ApiError && search.error.status === 404;
+  const unavailable = search.isError && search.error instanceof ApiError && search.error.status === 404;
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-700">Search</p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink-900 sm:text-3xl">Ask across every conversation</h1>
-      <form
-        className="mt-6"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const data = new FormData(e.currentTarget);
-          setParams({ q: String(data.get("q") ?? "") });
-        }}
-      >
-        <Input
-          key={q}
-          name="q"
-          defaultValue={q}
-          placeholder="Search conversations, insights, objections..."
-          aria-label="Search query"
-          className="h-12 text-base"
-        />
-      </form>
-      <div className="mt-3 flex flex-wrap gap-2">
+    <div className="page mid">
+      <div className="eyebrow" style={{ marginBottom: 6 }}>
+        Search every call
+      </div>
+      <h1 className="serif" style={{ fontSize: 32, letterSpacing: "-.02em", marginBottom: 4 }}>
+        Find the moment, not the document.
+      </h1>
+      <p className="sub" style={{ marginBottom: 16 }}>
+        Every result is a segment someone actually said.
+      </p>
+      <input
+        className="inp big"
+        value={q}
+        autoFocus
+        placeholder="Try: security, no next step, pricing, competitor…"
+        aria-label="Search query"
+        onChange={(e) => setParams({ q: e.target.value })}
+      />
+      <div className="hstack" style={{ flexWrap: "wrap", margin: "12px 0 18px" }}>
         {SUGGESTIONS.map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs hover:border-violet-200 hover:text-violet-700",
-              q === item ? "border-violet-300 bg-violet-50 text-violet-800" : "border-ink-100 bg-white text-ink-600",
-            )}
-            onClick={() => setParams({ q: item })}
-          >
+          <button key={item} type="button" className="chip" style={{ height: 28, cursor: "pointer" }} onClick={() => setParams({ q: item })}>
             {item}
           </button>
         ))}
       </div>
-
-      <div className="mt-8">
-        {!q ? (
-          <EmptyState
-            title="Search like a research engine"
-            description="Try pricing objections, integrations, or deals with no next step."
-          />
-        ) : search.isLoading ? (
-          <PageSkeleton />
-        ) : unavailable ? (
-          <EmptyState
-            title="Search is not available on this API yet"
-            description="Prompt 2 has no /search endpoint. This page falls back to client-side search over shipped calls; that lookup also failed."
-          />
-        ) : search.isError ? (
-          <ErrorState
-            title="Search failed"
-            description={userFacingMessage(search.error, "Could not load search results. Try a different query.")}
-            onRetry={() => void search.refetch()}
-          />
-        ) : search.data && search.data.total === 0 ? (
-          <EmptyState title="No matches" description={`Nothing in shipped calls matched “${q}”.`} />
-        ) : search.data ? (
-          <>
-            <ResultList title="Calls" items={search.data.groups.calls} actionLabel="Open" />
-            <ResultList title="Transcript" items={search.data.groups.segments} actionLabel="Open evidence" />
-            <ResultList title="Insights" items={search.data.groups.insights} actionLabel="Open" />
-          </>
-        ) : null}
-      </div>
+      {!q ? (
+        <EmptyState title="Type a word from a call" description="Results are moments somebody said, not document links." />
+      ) : search.isLoading ? (
+        <PageSkeleton />
+      ) : unavailable ? (
+        <EmptyState title="Search is not available on this API yet" description="Falling back to client-side search failed." />
+      ) : search.isError ? (
+        <ErrorState title="Search failed" description={search.error instanceof Error ? search.error.message : "Try again."} onRetry={() => void search.refetch()} />
+      ) : search.data && search.data.total === 0 ? (
+        <div className="receipt absent">
+          <div className="sub" style={{ fontSize: 13.5 }}>
+            Nothing in any transcript matches “{q}”. We return no result rather than a loose one.
+          </div>
+        </div>
+      ) : search.data ? (
+        <div className="vstack" style={{ gap: 16 }}>
+          <div className="tiny">
+            {search.data.total} results across calls · {search.data.groups.segments.length} spoken moments · {search.data.groups.insights.length} validated insights
+          </div>
+          {search.data.groups.insights.length ? (
+            <section className="vstack" style={{ gap: 10 }}>
+              <div className="h-sec">Validated insights</div>
+              {search.data.groups.insights.map((item) => (
+                <InsightRow key={item.id} item={item} query={q} />
+              ))}
+            </section>
+          ) : null}
+          {search.data.groups.segments.length ? (
+            <section className="vstack" style={{ gap: 14 }}>
+              <div className="h-sec">Spoken moments</div>
+              {groupByCall(search.data.groups.segments).map((group) => (
+                <div key={group.callTitle} className="vstack" style={{ gap: 10 }}>
+                  <div className="eyebrow">{group.callTitle}</div>
+                  {group.items.map((item) => (
+                    <SegmentReceipt key={item.id} item={item} query={q} />
+                  ))}
+                </div>
+              ))}
+            </section>
+          ) : null}
+          {search.data.groups.calls.length ? (
+            <section className="vstack" style={{ gap: 8 }}>
+              <div className="h-sec">Matching calls</div>
+              {search.data.groups.calls.map((item) => (
+                <Link key={item.id} to={`/calls/${item.callId}/verdict`} className="between" style={{ padding: "8px 0" }}>
+                  <span>
+                    <span style={{ fontWeight: 700 }}>{item.title}</span>
+                    <span className="tiny" style={{ marginLeft: 8 }}>{item.snippet}</span>
+                  </span>
+                  <ArrowGlyph />
+                </Link>
+              ))}
+            </section>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

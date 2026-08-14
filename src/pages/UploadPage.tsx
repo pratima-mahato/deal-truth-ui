@@ -1,13 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { PageHeader } from "@/components/layout/AppShell";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Field, Input, Select } from "@/components/ui/Input";
-import { Tabs } from "@/components/ui/Tabs";
-import { Alert } from "@/components/ui/Alert";
 import { useUploadFlow } from "@/hooks/useCallApi";
 import type { CallDirection } from "@/api/contracts";
+import { CallDropZone } from "@/features/ingest/CallDropZone";
 
 const MAX_BYTES = 80 * 1024 * 1024;
 const ALLOWED = ["audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4", "audio/webm", "audio/ogg"];
@@ -16,20 +11,17 @@ export function UploadPage() {
   const navigate = useNavigate();
   const upload = useUploadFlow();
   const [tab, setTab] = useState("file");
-  const [title, setTitle] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [repName, setRepName] = useState("");
+  const [title, setTitle] = useState("Acme Inc. · Enterprise discovery");
+  const [customerName, setCustomerName] = useState("Sarah Mitchell · Acme Inc.");
+  const [repName, setRepName] = useState("Rahul Mehta");
   const [direction, setDirection] = useState<CallDirection>("outbound");
-  const [competitors, setCompetitors] = useState("");
+  const [competitors, setCompetitors] = useState("AcmeAI, VoiceForge");
+  const [keywords, setKeywords] = useState("Salesforce, SOC 2, security");
   const [sourceUrl, setSourceUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function validate(): boolean {
-    if (!title.trim()) {
-      setError("Title is required.");
-      return false;
-    }
     if (tab === "file") {
       if (!file) {
         setError("Choose an audio file.");
@@ -56,98 +48,109 @@ export function UploadPage() {
     if (!validate()) return;
     upload.mutate(
       {
-        title: title.trim(),
+        title: title.trim() || file?.name.replace(/\.[^.]+$/, ""),
         customerName: customerName.trim() || undefined,
         repName: repName.trim() || undefined,
         callDirection: direction,
         sourceType: tab === "url" ? "source_url" : "upload",
         sourceUrl: tab === "url" ? sourceUrl : undefined,
-        trackedCompetitors: competitors
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        trackedCompetitors: competitors.split(",").map((s) => s.trim()).filter(Boolean),
+        trackedKeywords: keywords.split(",").map((s) => s.trim()).filter(Boolean),
         file: tab === "file" ? file ?? undefined : undefined,
       },
-      {
-        onSuccess: (call) => navigate(`/calls/${call.id}/processing`),
-      },
+      { onSuccess: (call) => navigate(`/calls/${call.id}/processing`) },
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <PageHeader title="Upload a call" description="Audio stays on the API. This app only sends the file over HTTP." />
-      <Card className="p-4 sm:p-6">
-        <form className="space-y-4" onSubmit={onSubmit}>
-          <Tabs
-            tabs={[
-              { id: "file", label: "File upload" },
-              { id: "url", label: "Recording URL" },
-            ]}
-            value={tab}
-            onChange={setTab}
-          />
-          {tab === "file" ? (
-            <Field label="Audio file" htmlFor="file">
-              <Input
-                id="file"
-                type="file"
-                accept=".mp3,.wav,.m4a,.webm,.ogg,audio/*"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
-            </Field>
-          ) : (
-            <Field label="HTTPS recording URL" htmlFor="url">
-              <Input
-                id="url"
-                value={sourceUrl}
-                onChange={(e) => setSourceUrl(e.target.value)}
-                placeholder="https://…"
-              />
-            </Field>
-          )}
-          <Field label="Title" htmlFor="title">
-            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Acme discovery" />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Customer" htmlFor="customer">
-              <Input id="customer" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-            </Field>
-            <Field label="Rep" htmlFor="rep">
-              <Input id="rep" value={repName} onChange={(e) => setRepName(e.target.value)} />
-            </Field>
+    <div className="page narrow">
+      <div className="eyebrow" style={{ marginBottom: 6 }}>
+        New call
+      </div>
+      <h1 className="serif" style={{ fontSize: 32, letterSpacing: "-.02em", marginBottom: 16 }}>
+        Give it a recording. Get back notes you can defend.
+      </h1>
+      <form className="vstack" style={{ gap: 12 }} onSubmit={onSubmit}>
+        <div className="card pad-lg">
+          <div className="hstack" style={{ marginBottom: 10 }}>
+            <button type="button" className={tab === "file" ? "chip brand" : "chip"} onClick={() => setTab("file")}>
+              File
+            </button>
+            <button type="button" className={tab === "url" ? "chip brand" : "chip"} onClick={() => setTab("url")}>
+              HTTPS link
+            </button>
+            <span className="chip">mp3 wav m4a</span>
           </div>
-          <Field label="Direction" htmlFor="direction">
-            <Select
-              id="direction"
-              value={direction}
-              onChange={(e) => setDirection(e.target.value as CallDirection)}
-            >
-              <option value="outbound">Outbound</option>
-              <option value="inbound">Inbound</option>
-              <option value="internal">Internal</option>
-              <option value="unknown">Unknown</option>
-            </Select>
-          </Field>
-          <Field label="Tracked competitors" htmlFor="comp">
-            <Input
-              id="comp"
-              value={competitors}
-              onChange={(e) => setCompetitors(e.target.value)}
-              placeholder="Comma-separated"
+          {tab === "file" ? (
+            <CallDropZone
+              file={file}
+              onFile={setFile}
+              onAnalyze={() => {
+                if (validate()) {
+                  onSubmit({ preventDefault() {} } as FormEvent);
+                }
+              }}
+              pending={upload.isPending}
+              error={error}
             />
-          </Field>
-          {error ? <Alert tone="danger" title={error} /> : null}
-          {upload.isError ? (
-            <Alert tone="danger" title="Upload failed">
-              {upload.error instanceof Error ? upload.error.message : "Try again."}
-            </Alert>
-          ) : null}
-          <Button type="submit" disabled={upload.isPending} className="w-full sm:w-auto">
-            {upload.isPending ? "Starting analysis…" : "Process call"}
-          </Button>
-        </form>
-      </Card>
+          ) : (
+            <input className="inp" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
+          )}
+        </div>
+        <div className="card pad-lg">
+          <div className="eyebrow" style={{ marginBottom: 6 }}>
+            Customer
+          </div>
+          <input className="inp" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+        </div>
+        <div className="card pad-lg">
+          <div className="eyebrow" style={{ marginBottom: 6 }}>
+            Rep
+          </div>
+          <input className="inp" value={repName} onChange={(e) => setRepName(e.target.value)} />
+        </div>
+        <div className="card pad-lg">
+          <div className="split" style={{ gap: 12 }}>
+            <div>
+              <div className="eyebrow" style={{ marginBottom: 6 }}>
+                Tracked competitors
+              </div>
+              <input className="inp" value={competitors} onChange={(e) => setCompetitors(e.target.value)} />
+            </div>
+            <div>
+              <div className="eyebrow" style={{ marginBottom: 6 }}>
+                Tracked keywords
+              </div>
+              <input className="inp" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+            </div>
+          </div>
+        </div>
+        <div className="card pad-lg">
+          <div className="eyebrow" style={{ marginBottom: 6 }}>
+            Direction
+          </div>
+          <div className="hstack" style={{ marginBottom: 12 }}>
+            {(["outbound", "inbound"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={direction === value ? "chip brand" : "chip"}
+                onClick={() => setDirection(value)}
+              >
+                {value === "outbound" ? "Outbound" : "Inbound"}
+              </button>
+            ))}
+          </div>
+          <input className="inp" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+          {error ? <p className="tiny" style={{ marginTop: 10, color: "var(--blocker)" }}>{error}</p> : null}
+          <div className="between" style={{ marginTop: 18 }}>
+            <span className="tiny">Audio is sent for diarised transcription. Nothing else leaves your instance.</span>
+            <button type="submit" className="btn primary" disabled={upload.isPending}>
+              {upload.isPending ? "Starting…" : "Analyse call"}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   );
 }

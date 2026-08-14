@@ -1,8 +1,7 @@
 import type { CallReport, Transcript } from "@/api/contracts";
-import { Card } from "@/components/ui/Card";
-import { formatDate, formatDuration } from "@/lib/utils";
+import { formatClock, formatDate } from "@/lib/utils";
+import { countSilenceGaps } from "@/lib/evidence";
 import { downloadCallExport } from "@/api/endpoints/calls";
-import { Button } from "@/components/ui/Button";
 import { useState } from "react";
 
 export function CallInfoView({
@@ -12,15 +11,15 @@ export function CallInfoView({
   report: CallReport;
   transcript: Transcript;
 }) {
-  const call = report.call;
   const [exportError, setExportError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"json" | "markdown" | null>(null);
+  const silenceGaps = report.metrics.silenceGapCount ?? countSilenceGaps(transcript);
 
   async function exportFile(format: "json" | "markdown") {
     setExportError(null);
     setExporting(format);
     try {
-      await downloadCallExport(call.id, format);
+      await downloadCallExport(report.call.id, format);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : "Export failed.");
     } finally {
@@ -29,57 +28,53 @@ export function CallInfoView({
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card className="p-5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">Call</h2>
-        <dl className="mt-3 space-y-2 text-sm">
-          <Row label="Customer" value={call.customerName} />
-          <Row label="Rep" value={call.repName} />
-          <Row label="Direction" value={call.callDirection} />
-          <Row label="Date" value={formatDate(call.createdAt)} />
-          <Row label="Duration" value={formatDuration(call.durationMs)} />
-          <Row label="Language" value={call.language} />
-          <Row label="Source" value={call.sourceType} />
-        </dl>
-      </Card>
-      <Card className="p-5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">Participants</h2>
-        <ul className="mt-3 space-y-2 text-sm">
-          {transcript.speakers.map((speaker) => (
-            <li key={speaker.id} className="flex justify-between">
-              <span className="font-medium text-ink-900">{speaker.displayName}</span>
-              <span className="capitalize text-ink-500">{speaker.role}</span>
-            </li>
+    <div className="card pad-lg reveal">
+      <div className="h-sec" style={{ marginBottom: 12 }}>
+        Conversation metrics
+      </div>
+      <div style={{ marginBottom: 7 }}>
+        <div style={{ display: "flex", height: 9, borderRadius: 9, overflow: "hidden", gap: 2 }}>
+          <i style={{ flex: report.metrics.talkRatio.sellerPct, background: "var(--brand)" }} />
+          <i style={{ flex: report.metrics.talkRatio.customerPct, background: "var(--proof)" }} />
+        </div>
+      </div>
+      <div className="between tiny" style={{ marginBottom: 14 }}>
+        <span>Rep {Math.round(report.metrics.talkRatio.sellerPct)}%</span>
+        <span>Customer {Math.round(report.metrics.talkRatio.customerPct)}%</span>
+      </div>
+      <dl className="kv">
+        <dt>Questions asked</dt>
+        <dd className="mono">{report.metrics.questionCount}</dd>
+        <dt>Longest monologue</dt>
+        <dd className="mono">
+          {formatClock(report.metrics.longestMonologue.durationMs)} · {report.metrics.longestMonologue.speakerName}
+        </dd>
+        <dt>Silence gaps &gt; 2s</dt>
+        <dd className="mono">{silenceGaps}</dd>
+        <dt>Date</dt>
+        <dd>{formatDate(report.call.createdAt)}</dd>
+      </dl>
+      <div style={{ marginTop: 16 }}>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>
+          Tracked terms
+        </div>
+        <div className="hstack" style={{ flexWrap: "wrap" }}>
+          {report.metrics.keywordHits.map((hit) => (
+            <span key={hit.term} className="chip">
+              {hit.term} <b>{hit.count}</b>
+            </span>
           ))}
-        </ul>
-        <div className="mt-6">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">Talk ratio</h3>
-          <p className="mt-2 text-sm text-ink-700">
-            Seller {Math.round(report.metrics.talkRatio.sellerPct)}% · Customer {Math.round(report.metrics.talkRatio.customerPct)}%
-          </p>
         </div>
-      </Card>
-      <Card className="p-5 md:col-span-2">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-400">Export</h2>
-        <div className="mt-3 flex gap-2">
-          <Button variant="secondary" size="sm" onClick={() => void exportFile("json")} disabled={exporting != null}>
-            {exporting === "json" ? "Downloading…" : "JSON"}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => void exportFile("markdown")} disabled={exporting != null}>
-            {exporting === "markdown" ? "Downloading…" : "Markdown"}
-          </Button>
-        </div>
-        {exportError ? <p className="mt-2 text-sm text-red-700">{exportError}</p> : null}
-      </Card>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-ink-400">{label}</dt>
-      <dd className="text-right font-medium text-ink-900">{value}</dd>
+      </div>
+      <div className="hstack" style={{ marginTop: 16 }}>
+        <button type="button" className="btn sm" onClick={() => void exportFile("json")} disabled={exporting != null}>
+          {exporting === "json" ? "Downloading…" : "Export JSON"}
+        </button>
+        <button type="button" className="btn sm" onClick={() => void exportFile("markdown")} disabled={exporting != null}>
+          {exporting === "markdown" ? "Downloading…" : "Export .md"}
+        </button>
+      </div>
+      {exportError ? <p className="tiny" style={{ marginTop: 8, color: "var(--blocker)" }}>{exportError}</p> : null}
     </div>
   );
 }
